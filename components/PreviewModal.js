@@ -24,11 +24,48 @@ export default function PreviewModal({ isOpen, onClose, test = {}, content = [] 
     );
   }
 
-  const [currentSection, setCurrentSection] = useState(0);
+  const [sections, setSections] = useState(() => transformContent(content, test.type));
   const [responses, setResponses] = useState({});
   const [essayResponse, setEssayResponse] = useState('');
   const [timeRemaining, setTimeRemaining] = useState(test.type === 'writing' ? '45:00' : '60:00');
   const [hasStarted, setHasStarted] = useState(false);
+  const transformContent = (rawContent, testType) => {
+    if (testType === 'writing') {
+      return rawContent; // Writing tests have a different structure
+    }
+    
+    // Transform raw content into sections with questions
+    return rawContent.reduce((sections, [
+      _, sectionIndex, title, content, questionIndex, questionText, optionsJson, correctAnswer
+    ]) => {
+      const idx = parseInt(sectionIndex) - 1;
+      if (!sections[idx]) {
+        sections[idx] = {
+          title,
+          content,
+          questions: []
+        };
+      }
+      
+      // Parse options and add question to the right section
+      try {
+        sections[idx].questions[parseInt(questionIndex) - 1] = {
+          text: questionText,
+          options: JSON.parse(optionsJson || '[]'),
+          correctAnswer
+        };
+      } catch (error) {
+        console.error('Error parsing options JSON:', error);
+        sections[idx].questions[parseInt(questionIndex) - 1] = {
+          text: questionText,
+          options: [],
+          correctAnswer
+        };
+      }
+      
+      return sections;
+    }, []);
+  };
 
   // Timer effect
   useEffect(() => {
@@ -112,20 +149,20 @@ export default function PreviewModal({ isOpen, onClose, test = {}, content = [] 
             />
             
             <div className="flex-1 overflow-auto p-6">
-              {test.type === 'writing' ? (
-                <WritingPreview 
-                  prompt={content[currentSection]}
-                  response={essayResponse}
-                  onChange={handleEssayChange}
-                />
-              ) : (
-                <QuestionPreview 
-                  section={content[currentSection]}
-                  type={test.type}
-                  responses={responses}
-                  onSelect={handleOptionSelect}
-                />
-              )}
+            {test.type === 'writing' ? (
+              <WritingPreview 
+                prompt={content[currentSection]}
+                response={essayResponse}
+                onChange={handleEssayChange}
+              />
+            ) : (
+              <QuestionPreview 
+                section={sections[currentSection]}
+                type={test.type}
+                responses={responses}
+                onSelect={handleOptionSelect}
+              />
+            )}
             </div>
 
             <FooterNav 
