@@ -11,6 +11,9 @@ const transformContent = (rawContent, testType) => {
     return rawContent;
   }
   
+  // For debugging
+  console.log("Raw content:", rawContent);
+  
   const sectionMap = {};
   
   for (let i = 0; i < rawContent.length; i++) {
@@ -58,9 +61,13 @@ const transformContent = (rawContent, testType) => {
     };
   }
   
-  return Object.keys(sectionMap)
+  // Convert to array and sort by section index
+  const result = Object.keys(sectionMap)
     .sort()
     .map(key => sectionMap[key]);
+  
+  console.log("Transformed sections:", result);
+  return result;
 };
 
 // Split the modal into multiple components to avoid conditional returns
@@ -82,14 +89,25 @@ function ErrorModal({ onClose }) {
 }
 
 function ModalContent({ test, content, onClose }) {
+  // Always at least 1 section
+  const processedContent = test.type === 'writing' ? content : transformContent(content, test.type);
+  const totalSections = Math.max(1, processedContent.length);
+  
   const [currentSection, setCurrentSection] = useState(0);
-  const [sections, setSections] = useState(() => transformContent(content, test.type));
+  const [sections, setSections] = useState(processedContent);
   const [responses, setResponses] = useState({});
   const [essayResponse, setEssayResponse] = useState('');
   const [timeRemaining, setTimeRemaining] = useState(
     test.type === 'writing' ? '45:00' : '60:00'
   );
-  const [hasStarted, setHasStarted] = useState(false);
+  const [hasStarted, setHasStarted] = useState(true); // Auto-start for preview
+  
+  // Log the content for debugging
+  useEffect(() => {
+    console.log("Test type:", test.type);
+    console.log("Original content:", content);
+    console.log("Processed sections:", sections);
+  }, [test.type, content, sections]);
 
   // Timer effect
   useEffect(() => {
@@ -111,31 +129,9 @@ function ModalContent({ test, content, onClose }) {
     return () => clearInterval(timer);
   }, [timeRemaining, hasStarted]);
 
-  // Keyboard navigation effect
-  useEffect(() => {
-    const handleKeyPress = (e) => {
-      if (!hasStarted) return;
-      if (e.key === 'ArrowRight' && currentSection < (test.type === 'writing' ? content.length - 1 : sections.length - 1)) {
-        setCurrentSection(prev => prev + 1);
-      } else if (e.key === 'ArrowLeft' && currentSection > 0) {
-        setCurrentSection(prev => prev - 1);
-      } else if (e.key >= '1' && e.key <= '4') {
-        // Handle answer selection for current question
-        const optionIndex = parseInt(e.key) - 1;
-        
-        if (test.type !== 'writing' && 
-            sections[currentSection]?.questions?.[currentSection]?.options?.[optionIndex]) {
-          handleOptionSelect(currentSection, sections[currentSection].questions[currentSection].options[optionIndex]);
-        }
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyPress);
-    return () => window.removeEventListener('keydown', handleKeyPress);
-  }, [hasStarted, currentSection, sections, content, test.type]);
-
-  const handleStart = () => {
-    setHasStarted(true);
+  // Add Print functionality
+  const handlePrint = () => {
+    window.print();
   };
 
   const handleOptionSelect = (questionIndex, option) => {
@@ -157,23 +153,48 @@ function ModalContent({ test, content, onClose }) {
 
   const getCurrentContent = () => {
     if (test.type === 'writing') {
-      return currentSection < content.length ? content[currentSection] : { type: '', text: '', wordLimit: 0 };
+      return currentSection < sections.length ? sections[currentSection] : { type: '', text: '', wordLimit: 0 };
     } else {
       return currentSection < sections.length ? sections[currentSection] : { title: '', content: '', questions: [] };
     }
   };
 
-  if (!hasStarted) {
-    return <StartScreen onStart={handleStart} testType={test.type} />;
-  }
+  // Display passage content for debugging
+  const currentSectionData = getCurrentContent();
+  console.log("Current section data:", currentSectionData);
 
   return (
     <>
-      <NavigationBar 
-        currentSection={currentSection + 1}
-        totalSections={test.type === 'writing' ? content.length : sections.length}
-        timeRemaining={timeRemaining}
-      />
+      {/* Close button */}
+      <div className="absolute top-2 right-2 z-10">
+        <button 
+          onClick={onClose}
+          className="bg-gray-200 text-gray-700 rounded-full p-2 hover:bg-gray-300"
+          aria-label="Close preview"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+      
+      {/* Print button */}
+      <div className="absolute top-2 right-14 z-10">
+        <button 
+          onClick={handlePrint}
+          className="bg-gray-200 text-gray-700 rounded-full p-2 hover:bg-gray-300"
+          aria-label="Print test"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+          </svg>
+        </button>
+      </div>
+      
+      <div className="bg-gray-200 px-4 py-2 flex justify-between items-center">
+        <span>Section {currentSection + 1} of {totalSections}</span>
+        <span>Time Remaining: {timeRemaining}</span>
+      </div>
       
       <div className="flex-1 overflow-auto p-6">
         {test.type === 'writing' ? (
@@ -192,19 +213,29 @@ function ModalContent({ test, content, onClose }) {
         )}
       </div>
 
-      <FooterNav 
-        onNext={() => {
-          const maxSections = test.type === 'writing' ? content.length : sections.length;
-          if (currentSection === maxSections - 1) {
-            handleSubmit();
-          } else {
-            setCurrentSection(prev => prev + 1);
-          }
-        }}
-        onPrev={() => setCurrentSection(prev => prev - 1)}
-        isLastSection={currentSection === (test.type === 'writing' ? content.length - 1 : sections.length - 1)}
-        isFirstSection={currentSection === 0}
-      />
+      <div className="border-t px-6 py-4 flex justify-between items-center">
+        <button
+          onClick={() => setCurrentSection(prev => Math.max(0, prev - 1))}
+          disabled={currentSection === 0}
+          className={`px-4 py-2 rounded ${currentSection === 0 
+            ? 'text-gray-400 cursor-not-allowed' 
+            : 'text-indigo-600 hover:bg-indigo-50'}`}
+        >
+          Previous Section
+        </button>
+        <button
+          onClick={() => {
+            if (currentSection >= totalSections - 1) {
+              onClose();
+            } else {
+              setCurrentSection(prev => prev + 1);
+            }
+          }}
+          className="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700"
+        >
+          {currentSection >= totalSections - 1 ? 'Close Preview' : 'Next Section'}
+        </button>
+      </div>
     </>
   );
 }
@@ -215,10 +246,13 @@ export default function PreviewModal({ isOpen, onClose, test = {}, content = [] 
     return null;
   }
 
+  // Log the incoming props for debugging
+  console.log("PreviewModal props:", { test, contentLength: content?.length });
+
   // Ensure we have a container even when showing errors
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white w-full max-w-5xl h-[90vh] flex flex-col rounded-lg">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 print:bg-white print:bg-opacity-100">
+      <div className="bg-white w-full max-w-5xl h-[90vh] flex flex-col rounded-lg relative print:h-auto print:max-h-none">
         {!test || !test.type ? (
           <ErrorModal onClose={onClose} />
         ) : (
@@ -234,16 +268,21 @@ function WritingPreview({ prompt, response, onChange }) {
     return <div>No prompt data available</div>;
   }
 
+  // Handle both object and array formats
+  const promptType = prompt.type || prompt[2] || "ESSAY";
+  const promptText = prompt.text || prompt[3] || "";
+  const wordLimit = prompt.wordLimit || prompt[4] || 500;
+
   return (
     <div className="space-y-6">
       <div className="bg-gray-50 p-6 rounded-lg">
         <div className="mb-4">
           <span className="uppercase text-sm font-semibold text-gray-600">
-            {prompt.type || prompt[2] || "ESSAY"}
+            {promptType} ESSAY
           </span>
         </div>
-        <p className="text-lg mb-4">{prompt.text || prompt[3]}</p>
-        <p className="text-sm text-gray-600">Word limit: {prompt.wordLimit || prompt[4] || 500} words</p>
+        <p className="text-lg mb-4">{promptText}</p>
+        <p className="text-sm text-gray-600">Word limit: {wordLimit} words</p>
       </div>
 
       <div className="mt-6">
@@ -256,7 +295,7 @@ function WritingPreview({ prompt, response, onChange }) {
         />
         <div className="mt-2 text-sm text-gray-500 flex justify-between">
           <span>Word count: {response.trim().split(/\s+/).length || 0}</span>
-          <span>{prompt.wordLimit || prompt[4] || 500} words maximum</span>
+          <span>{wordLimit} words maximum</span>
         </div>
       </div>
     </div>
@@ -264,14 +303,27 @@ function WritingPreview({ prompt, response, onChange }) {
 }
 
 function QuestionPreview({ section, type, responses, onSelect }) {
-  if (!section || !section.questions || !Array.isArray(section.questions)) {
-    return <div>No questions available for this section</div>;
+  // Debug the section data
+  console.log("QuestionPreview received section:", section);
+  
+  if (!section) {
+    return <div className="p-4 bg-yellow-100 border border-yellow-400 rounded">
+      No section data available
+    </div>;
+  }
+  
+  if (!section.questions || !Array.isArray(section.questions) || section.questions.length === 0) {
+    return <div className="p-4 bg-yellow-100 border border-yellow-400 rounded">
+      <p>No questions available for this section.</p>
+      <p className="mt-2"><strong>Debug info:</strong></p>
+      <pre className="mt-1 text-xs overflow-auto">{JSON.stringify(section, null, 2)}</pre>
+    </div>;
   }
 
   return (
     <div className="space-y-8">
       {/* Reading Passage or Listening Instructions */}
-      {type === 'reading' && (
+      {type === 'reading' && section.content && (
         <div className="bg-gray-50 p-6 rounded-lg prose max-w-none">
           <h3 className="font-medium text-lg mb-4">{section.title}</h3>
           <div className="whitespace-pre-wrap">{section.content}</div>
@@ -305,25 +357,6 @@ function QuestionPreview({ section, type, responses, onSelect }) {
           </div>
         ))}
       </div>
-    </div>
-  );
-}
-
-function StartScreen({ onStart, testType }) {
-  return (
-    <div className="h-full flex flex-col items-center justify-center p-8">
-      <h2 className="text-2xl font-bold mb-6">Ready to begin the {testType} test?</h2>
-      <div className="max-w-xl text-center space-y-4 mb-8">
-        <p>You will have {testType === 'writing' ? '45' : '60'} minutes to complete this test.</p>
-        <p>Make sure you're in a quiet environment and won't be disturbed.</p>
-        <p className="font-medium">Click Start when you're ready to begin.</p>
-      </div>
-      <button
-        onClick={onStart}
-        className="px-8 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
-      >
-        Start Test
-      </button>
     </div>
   );
 }
