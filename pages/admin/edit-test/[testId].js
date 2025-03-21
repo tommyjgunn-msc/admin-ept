@@ -25,6 +25,48 @@ const formatContentForAPI = (sections) => {
   });
 };
 
+const formatContentForPreview = (test) => {
+  if (!test || !test.content) return [];
+  
+  if (test.type === 'writing') {
+    return test.content; // Writing content works as-is
+  } 
+  
+  // For reading/listening tests, transform raw content into sections
+  // This matches the structure used in QuestionTestEditor
+  return test.content.reduce((sections, [
+    _, sectionIndex, title, content, questionIndex, questionText, optionsJson, correctAnswer
+  ]) => {
+    const idx = parseInt(sectionIndex) - 1;
+    if (!sections[idx]) {
+      sections[idx] = {
+        title,
+        content,
+        questions: []
+      };
+    }
+    
+    try {
+      const options = JSON.parse(optionsJson || '[]');
+      // Ensure questions array exists
+      if (!sections[idx].questions) {
+        sections[idx].questions = [];
+      }
+      
+      // Create the question at the specific index
+      sections[idx].questions[parseInt(questionIndex) - 1] = {
+        text: questionText,
+        options: options,
+        correctAnswer
+      };
+    } catch (error) {
+      console.error("Error parsing options:", error);
+    }
+    
+    return sections;
+  }, []);
+};
+
 export default function EditTest() {
   const router = useRouter();
   const { testId } = router.query;
@@ -223,12 +265,9 @@ export default function EditTest() {
     <PreviewModal
         isOpen={showFullPreview}
         onClose={() => setShowFullPreview(false)}
-        test={test} // Your test metadata
-        content={test.type === 'writing' ? // Format content based on type
-          [test.content] : // For writing tests, wrap single prompt in array
-          test.content    // For reading/listening tests, pass sections array
-        }
-      >
+        test={test}
+        content={formatContentForPreview(test)}
+    >
         <div className="space-y-8">
           <div className="bg-gray-50 p-6 rounded-lg">
             <h2 className="text-2xl font-bold mb-6">{test.title}</h2>
