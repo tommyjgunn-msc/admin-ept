@@ -4,31 +4,7 @@ import NavigationBar from './PreviewModal/NavigationBar';
 import FooterNav from './PreviewModal/FooterNav';
 
 export default function PreviewModal({ isOpen, onClose, test = {}, content = [] }) {
-  // Guard against undefined test
-  if (!isOpen) return null;
-  if (!test || !test.type) {
-    console.error('Test data is missing or invalid');
-    return (
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-        <div className="bg-white rounded-lg p-6">
-          <h2 className="text-xl font-bold text-red-600">Error</h2>
-          <p className="mt-2">Invalid test data provided.</p>
-          <button
-            onClick={onClose}
-            className="mt-4 px-4 py-2 bg-gray-200 rounded hover:bg-gray-300"
-          >
-            Close
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  const [sections, setSections] = useState(() => transformContent(content, test.type));
-  const [responses, setResponses] = useState({});
-  const [essayResponse, setEssayResponse] = useState('');
-  const [timeRemaining, setTimeRemaining] = useState(test.type === 'writing' ? '45:00' : '60:00');
-  const [hasStarted, setHasStarted] = useState(false);
+  // Define transformContent function before using it in state initialization
   const transformContent = (rawContent, testType) => {
     if (testType === 'writing') {
       return rawContent; // Writing tests have a different structure
@@ -67,6 +43,39 @@ export default function PreviewModal({ isOpen, onClose, test = {}, content = [] 
     }, []);
   };
 
+  // Define all state variables at the top level
+  const [currentSection, setCurrentSection] = useState(0);
+  const [sections, setSections] = useState(() => {
+    if (!test || !test.type) return [];
+    return transformContent(content, test.type);
+  });
+  const [responses, setResponses] = useState({});
+  const [essayResponse, setEssayResponse] = useState('');
+  const [timeRemaining, setTimeRemaining] = useState(
+    (!test || !test.type) ? '60:00' : (test.type === 'writing' ? '45:00' : '60:00')
+  );
+  const [hasStarted, setHasStarted] = useState(false);
+
+  // Guard against undefined test - after state declarations
+  if (!isOpen) return null;
+  if (!test || !test.type) {
+    console.error('Test data is missing or invalid');
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="bg-white rounded-lg p-6">
+          <h2 className="text-xl font-bold text-red-600">Error</h2>
+          <p className="mt-2">Invalid test data provided.</p>
+          <button
+            onClick={onClose}
+            className="mt-4 px-4 py-2 bg-gray-200 rounded hover:bg-gray-300"
+          >
+            Close
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   // Timer effect
   useEffect(() => {
     let timer;
@@ -91,7 +100,7 @@ export default function PreviewModal({ isOpen, onClose, test = {}, content = [] 
   useEffect(() => {
     const handleKeyPress = (e) => {
       if (!hasStarted) return;
-      if (e.key === 'ArrowRight' && currentSection < content.length - 1) {
+      if (e.key === 'ArrowRight' && currentSection < sections.length - 1) {
         setCurrentSection(prev => prev + 1);
       } else if (e.key === 'ArrowLeft' && currentSection > 0) {
         setCurrentSection(prev => prev - 1);
@@ -100,17 +109,15 @@ export default function PreviewModal({ isOpen, onClose, test = {}, content = [] 
         const currentQuestion = currentSection; // or however you track current question
         const optionIndex = parseInt(e.key) - 1;
         if (test.type !== 'writing' && 
-            content[currentSection].questions[currentQuestion]?.options[optionIndex]) {
-          handleOptionSelect(currentQuestion, content[currentSection].questions[currentQuestion].options[optionIndex]);
+            sections[currentSection]?.questions?.[currentQuestion]?.options?.[optionIndex]) {
+          handleOptionSelect(currentQuestion, sections[currentSection].questions[currentQuestion].options[optionIndex]);
         }
       }
     };
 
     window.addEventListener('keydown', handleKeyPress);
     return () => window.removeEventListener('keydown', handleKeyPress);
-  }, [hasStarted, currentSection, content, test.type]);
-
-  if (!isOpen) return null;
+  }, [hasStarted, currentSection, sections, test.type]);
 
   const handleStart = () => {
     setHasStarted(true);
@@ -126,13 +133,21 @@ export default function PreviewModal({ isOpen, onClose, test = {}, content = [] 
   const handleEssayChange = (e) => {
     const text = e.target.value;
     setEssayResponse(text);
-    const wordCount = text.trim().split(/\s+/).length;
   };
 
   const handleSubmit = () => {
     // Simulate submission
     alert('Test submitted! In the actual test, responses would be saved and scored.');
     onClose();
+  };
+
+  // Safety check for content access
+  const safeGetContent = (index) => {
+    if (test.type === 'writing') {
+      return index < content.length ? content[index] : { type: '', text: '', wordLimit: 0 };
+    } else {
+      return index < sections.length ? sections[index] : { title: '', content: '', questions: [] };
+    }
   };
 
   return (
@@ -144,20 +159,20 @@ export default function PreviewModal({ isOpen, onClose, test = {}, content = [] 
           <>
             <NavigationBar 
               currentSection={currentSection + 1}
-              totalSections={content.length}
+              totalSections={test.type === 'writing' ? content.length : sections.length}
               timeRemaining={timeRemaining}
             />
             
             <div className="flex-1 overflow-auto p-6">
             {test.type === 'writing' ? (
               <WritingPreview 
-                prompt={content[currentSection]}
+                prompt={safeGetContent(currentSection)}
                 response={essayResponse}
                 onChange={handleEssayChange}
               />
             ) : (
               <QuestionPreview 
-                section={sections[currentSection]}
+                section={safeGetContent(currentSection)}
                 type={test.type}
                 responses={responses}
                 onSelect={handleOptionSelect}
@@ -167,14 +182,15 @@ export default function PreviewModal({ isOpen, onClose, test = {}, content = [] 
 
             <FooterNav 
               onNext={() => {
-                if (currentSection === content.length - 1) {
+                const maxSections = test.type === 'writing' ? content.length : sections.length;
+                if (currentSection === maxSections - 1) {
                   handleSubmit();
                 } else {
                   setCurrentSection(prev => prev + 1);
                 }
               }}
               onPrev={() => setCurrentSection(prev => prev - 1)}
-              isLastSection={currentSection === content.length - 1}
+              isLastSection={currentSection === (test.type === 'writing' ? content.length - 1 : sections.length - 1)}
               isFirstSection={currentSection === 0}
             />
           </>
@@ -215,6 +231,10 @@ function WritingPreview({ prompt, response, onChange }) {
 }
 
 function QuestionPreview({ section, type, responses, onSelect }) {
+  if (!section || !section.questions) {
+    return <div>Loading questions...</div>;
+  }
+  
   return (
     <div className="space-y-8">
       {/* Reading Passage or Listening Instructions */}
