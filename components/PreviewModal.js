@@ -4,46 +4,82 @@ import NavigationBar from './PreviewModal/NavigationBar';
 import FooterNav from './PreviewModal/FooterNav';
 
 export default function PreviewModal({ isOpen, onClose, test = {}, content = [] }) {
-  // Define transformContent function before using it in state initialization
+  // Define transformContent function BEFORE using it in useState
   const transformContent = (rawContent, testType) => {
+    if (!testType) return [];
+    
     if (testType === 'writing') {
       return rawContent; // Writing tests have a different structure
     }
     
-    // Transform raw content into sections with questions
-    return rawContent.reduce((sections, [
-      _, sectionIndex, title, content, questionIndex, questionText, optionsJson, correctAnswer
-    ]) => {
-      const idx = parseInt(sectionIndex) - 1;
-      if (!sections[idx]) {
-        sections[idx] = {
-          title,
-          content,
+    // Ensure we have an array to work with
+    if (!Array.isArray(rawContent)) {
+      console.error('Content is not an array:', rawContent);
+      return [];
+    }
+    
+    // Group by section using a safer approach without destructuring
+    const sectionMap = {};
+    
+    for (let i = 0; i < rawContent.length; i++) {
+      const item = rawContent[i];
+      
+      // Skip if not an array
+      if (!Array.isArray(item)) continue;
+      
+      // Extract values safely
+      const sectionIndex = item[1];
+      const title = item[2] || '';
+      const sectionContent = item[3] || '';
+      const questionIndex = item[4];
+      const questionText = item[5] || '';
+      const optionsStr = item[6] || '[]';
+      const correctAnswer = item[7] || '';
+      
+      if (!sectionIndex || !questionIndex) continue;
+      
+      // Create or get section
+      if (!sectionMap[sectionIndex]) {
+        sectionMap[sectionIndex] = {
+          title: title,
+          content: sectionContent,
           questions: []
         };
       }
       
-      // Parse options and add question to the right section
+      // Parse options safely
+      let options = [];
       try {
-        sections[idx].questions[parseInt(questionIndex) - 1] = {
-          text: questionText,
-          options: JSON.parse(optionsJson || '[]'),
-          correctAnswer
-        };
-      } catch (error) {
-        console.error('Error parsing options JSON:', error);
-        sections[idx].questions[parseInt(questionIndex) - 1] = {
-          text: questionText,
-          options: [],
-          correctAnswer
-        };
+        options = JSON.parse(optionsStr);
+      } catch (err) {
+        console.error('Error parsing options:', err);
       }
       
-      return sections;
-    }, []);
+      // Ensure questions array is big enough
+      const qIdx = parseInt(questionIndex) - 1;
+      while (sectionMap[sectionIndex].questions.length <= qIdx) {
+        sectionMap[sectionIndex].questions.push({ 
+          text: '', 
+          options: [], 
+          correctAnswer: '' 
+        });
+      }
+      
+      // Set question
+      sectionMap[sectionIndex].questions[qIdx] = {
+        text: questionText,
+        options: options,
+        correctAnswer: correctAnswer
+      };
+    }
+    
+    // Convert to array and sort by section index
+    return Object.keys(sectionMap)
+      .sort()
+      .map(key => sectionMap[key]);
   };
 
-  // Define all state variables at the top level
+  // Now initialize state variables
   const [currentSection, setCurrentSection] = useState(0);
   const [sections, setSections] = useState(() => {
     if (!test || !test.type) return [];
@@ -100,24 +136,24 @@ export default function PreviewModal({ isOpen, onClose, test = {}, content = [] 
   useEffect(() => {
     const handleKeyPress = (e) => {
       if (!hasStarted) return;
-      if (e.key === 'ArrowRight' && currentSection < sections.length - 1) {
+      if (e.key === 'ArrowRight' && currentSection < (test.type === 'writing' ? content.length - 1 : sections.length - 1)) {
         setCurrentSection(prev => prev + 1);
       } else if (e.key === 'ArrowLeft' && currentSection > 0) {
         setCurrentSection(prev => prev - 1);
       } else if (e.key >= '1' && e.key <= '4') {
         // Handle answer selection for current question
-        const currentQuestion = currentSection; // or however you track current question
         const optionIndex = parseInt(e.key) - 1;
+        
         if (test.type !== 'writing' && 
-            sections[currentSection]?.questions?.[currentQuestion]?.options?.[optionIndex]) {
-          handleOptionSelect(currentQuestion, sections[currentSection].questions[currentQuestion].options[optionIndex]);
+            sections[currentSection]?.questions?.[currentSection]?.options?.[optionIndex]) {
+          handleOptionSelect(currentSection, sections[currentSection].questions[currentSection].options[optionIndex]);
         }
       }
     };
 
     window.addEventListener('keydown', handleKeyPress);
     return () => window.removeEventListener('keydown', handleKeyPress);
-  }, [hasStarted, currentSection, sections, test.type]);
+  }, [hasStarted, currentSection, sections, content, test.type]);
 
   const handleStart = () => {
     setHasStarted(true);
@@ -141,12 +177,12 @@ export default function PreviewModal({ isOpen, onClose, test = {}, content = [] 
     onClose();
   };
 
-  // Safety check for content access
-  const safeGetContent = (index) => {
+  // Safely get current content
+  const getCurrentContent = () => {
     if (test.type === 'writing') {
-      return index < content.length ? content[index] : { type: '', text: '', wordLimit: 0 };
+      return currentSection < content.length ? content[currentSection] : { type: '', text: '', wordLimit: 0 };
     } else {
-      return index < sections.length ? sections[index] : { title: '', content: '', questions: [] };
+      return currentSection < sections.length ? sections[currentSection] : { title: '', content: '', questions: [] };
     }
   };
 
@@ -164,20 +200,20 @@ export default function PreviewModal({ isOpen, onClose, test = {}, content = [] 
             />
             
             <div className="flex-1 overflow-auto p-6">
-            {test.type === 'writing' ? (
-              <WritingPreview 
-                prompt={safeGetContent(currentSection)}
-                response={essayResponse}
-                onChange={handleEssayChange}
-              />
-            ) : (
-              <QuestionPreview 
-                section={safeGetContent(currentSection)}
-                type={test.type}
-                responses={responses}
-                onSelect={handleOptionSelect}
-              />
-            )}
+              {test.type === 'writing' ? (
+                <WritingPreview 
+                  prompt={getCurrentContent()}
+                  response={essayResponse}
+                  onChange={handleEssayChange}
+                />
+              ) : (
+                <QuestionPreview 
+                  section={getCurrentContent()}
+                  type={test.type}
+                  responses={responses}
+                  onSelect={handleOptionSelect}
+                />
+              )}
             </div>
 
             <FooterNav 
@@ -201,16 +237,20 @@ export default function PreviewModal({ isOpen, onClose, test = {}, content = [] 
 }
 
 function WritingPreview({ prompt, response, onChange }) {
+  if (!prompt) {
+    return <div>No prompt data available</div>;
+  }
+
   return (
     <div className="space-y-6">
       <div className="bg-gray-50 p-6 rounded-lg">
         <div className="mb-4">
           <span className="uppercase text-sm font-semibold text-gray-600">
-            {prompt.type} ESSAY
+            {prompt.type || prompt[2] || "ESSAY"}
           </span>
         </div>
-        <p className="text-lg mb-4">{prompt.text}</p>
-        <p className="text-sm text-gray-600">Word limit: {prompt.wordLimit} words</p>
+        <p className="text-lg mb-4">{prompt.text || prompt[3]}</p>
+        <p className="text-sm text-gray-600">Word limit: {prompt.wordLimit || prompt[4] || 500} words</p>
       </div>
 
       <div className="mt-6">
@@ -223,7 +263,7 @@ function WritingPreview({ prompt, response, onChange }) {
         />
         <div className="mt-2 text-sm text-gray-500 flex justify-between">
           <span>Word count: {response.trim().split(/\s+/).length || 0}</span>
-          <span>{prompt.wordLimit} words maximum</span>
+          <span>{prompt.wordLimit || prompt[4] || 500} words maximum</span>
         </div>
       </div>
     </div>
@@ -231,10 +271,10 @@ function WritingPreview({ prompt, response, onChange }) {
 }
 
 function QuestionPreview({ section, type, responses, onSelect }) {
-  if (!section || !section.questions) {
-    return <div>Loading questions...</div>;
+  if (!section || !section.questions || !Array.isArray(section.questions)) {
+    return <div>No questions available for this section</div>;
   }
-  
+
   return (
     <div className="space-y-8">
       {/* Reading Passage or Listening Instructions */}
@@ -247,13 +287,13 @@ function QuestionPreview({ section, type, responses, onSelect }) {
 
       {/* Questions */}
       <div className="space-y-6">
-        {section.questions.map((question, qIndex) => (
+        {section.questions.filter(Boolean).map((question, qIndex) => (
           <div key={qIndex} className="border rounded-lg p-4">
             <p className="font-medium mb-4">
               {qIndex + 1}. {question.text}
             </p>
             <div className="space-y-3 ml-4">
-              {question.options.map((option, oIndex) => (
+              {Array.isArray(question.options) && question.options.map((option, oIndex) => (
                 <label 
                   key={oIndex} 
                   className="flex items-center space-x-3 cursor-pointer hover:bg-gray-50 p-2 rounded"
