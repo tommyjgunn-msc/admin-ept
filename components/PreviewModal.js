@@ -3,114 +3,93 @@ import { useState, useEffect } from 'react';
 import NavigationBar from './PreviewModal/NavigationBar';
 import FooterNav from './PreviewModal/FooterNav';
 
-export default function PreviewModal({ isOpen, onClose, test = {}, content = [] }) {
-  // Define transformContent function BEFORE using it in useState
-  const transformContent = (rawContent, testType) => {
-    if (!testType) return [];
+// Helper function defined outside the component
+const transformContent = (rawContent, testType) => {
+  if (!testType || !Array.isArray(rawContent)) return [];
+  
+  if (testType === 'writing') {
+    return rawContent;
+  }
+  
+  const sectionMap = {};
+  
+  for (let i = 0; i < rawContent.length; i++) {
+    const item = rawContent[i];
+    if (!Array.isArray(item)) continue;
     
-    if (testType === 'writing') {
-      return rawContent; // Writing tests have a different structure
-    }
+    const sectionIndex = item[1];
+    const title = item[2] || '';
+    const sectionContent = item[3] || '';
+    const questionIndex = item[4];
+    const questionText = item[5] || '';
+    const optionsStr = item[6] || '[]';
+    const correctAnswer = item[7] || '';
     
-    // Ensure we have an array to work with
-    if (!Array.isArray(rawContent)) {
-      console.error('Content is not an array:', rawContent);
-      return [];
-    }
+    if (!sectionIndex || !questionIndex) continue;
     
-    // Group by section using a safer approach without destructuring
-    const sectionMap = {};
-    
-    for (let i = 0; i < rawContent.length; i++) {
-      const item = rawContent[i];
-      
-      // Skip if not an array
-      if (!Array.isArray(item)) continue;
-      
-      // Extract values safely
-      const sectionIndex = item[1];
-      const title = item[2] || '';
-      const sectionContent = item[3] || '';
-      const questionIndex = item[4];
-      const questionText = item[5] || '';
-      const optionsStr = item[6] || '[]';
-      const correctAnswer = item[7] || '';
-      
-      if (!sectionIndex || !questionIndex) continue;
-      
-      // Create or get section
-      if (!sectionMap[sectionIndex]) {
-        sectionMap[sectionIndex] = {
-          title: title,
-          content: sectionContent,
-          questions: []
-        };
-      }
-      
-      // Parse options safely
-      let options = [];
-      try {
-        options = JSON.parse(optionsStr);
-      } catch (err) {
-        console.error('Error parsing options:', err);
-      }
-      
-      // Ensure questions array is big enough
-      const qIdx = parseInt(questionIndex) - 1;
-      while (sectionMap[sectionIndex].questions.length <= qIdx) {
-        sectionMap[sectionIndex].questions.push({ 
-          text: '', 
-          options: [], 
-          correctAnswer: '' 
-        });
-      }
-      
-      // Set question
-      sectionMap[sectionIndex].questions[qIdx] = {
-        text: questionText,
-        options: options,
-        correctAnswer: correctAnswer
+    if (!sectionMap[sectionIndex]) {
+      sectionMap[sectionIndex] = {
+        title: title,
+        content: sectionContent,
+        questions: []
       };
     }
     
-    // Convert to array and sort by section index
-    return Object.keys(sectionMap)
-      .sort()
-      .map(key => sectionMap[key]);
-  };
+    let options = [];
+    try {
+      options = JSON.parse(optionsStr);
+    } catch (err) {
+      console.error('Error parsing options:', err);
+    }
+    
+    const qIdx = parseInt(questionIndex) - 1;
+    while (sectionMap[sectionIndex].questions.length <= qIdx) {
+      sectionMap[sectionIndex].questions.push({ 
+        text: '', 
+        options: [], 
+        correctAnswer: '' 
+      });
+    }
+    
+    sectionMap[sectionIndex].questions[qIdx] = {
+      text: questionText,
+      options: options,
+      correctAnswer: correctAnswer
+    };
+  }
+  
+  return Object.keys(sectionMap)
+    .sort()
+    .map(key => sectionMap[key]);
+};
 
-  // Now initialize state variables
+// Split the modal into multiple components to avoid conditional returns
+function ErrorModal({ onClose }) {
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-white rounded-lg p-6">
+        <h2 className="text-xl font-bold text-red-600">Error</h2>
+        <p className="mt-2">Invalid test data provided.</p>
+        <button
+          onClick={onClose}
+          className="mt-4 px-4 py-2 bg-gray-200 rounded hover:bg-gray-300"
+        >
+          Close
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function ModalContent({ test, content, onClose }) {
   const [currentSection, setCurrentSection] = useState(0);
-  const [sections, setSections] = useState(() => {
-    if (!test || !test.type) return [];
-    return transformContent(content, test.type);
-  });
+  const [sections, setSections] = useState(() => transformContent(content, test.type));
   const [responses, setResponses] = useState({});
   const [essayResponse, setEssayResponse] = useState('');
   const [timeRemaining, setTimeRemaining] = useState(
-    (!test || !test.type) ? '60:00' : (test.type === 'writing' ? '45:00' : '60:00')
+    test.type === 'writing' ? '45:00' : '60:00'
   );
   const [hasStarted, setHasStarted] = useState(false);
-
-  // Guard against undefined test - after state declarations
-  if (!isOpen) return null;
-  if (!test || !test.type) {
-    console.error('Test data is missing or invalid');
-    return (
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-        <div className="bg-white rounded-lg p-6">
-          <h2 className="text-xl font-bold text-red-600">Error</h2>
-          <p className="mt-2">Invalid test data provided.</p>
-          <button
-            onClick={onClose}
-            className="mt-4 px-4 py-2 bg-gray-200 rounded hover:bg-gray-300"
-          >
-            Close
-          </button>
-        </div>
-      </div>
-    );
-  }
 
   // Timer effect
   useEffect(() => {
@@ -172,12 +151,10 @@ export default function PreviewModal({ isOpen, onClose, test = {}, content = [] 
   };
 
   const handleSubmit = () => {
-    // Simulate submission
     alert('Test submitted! In the actual test, responses would be saved and scored.');
     onClose();
   };
 
-  // Safely get current content
   const getCurrentContent = () => {
     if (test.type === 'writing') {
       return currentSection < content.length ? content[currentSection] : { type: '', text: '', wordLimit: 0 };
@@ -186,50 +163,66 @@ export default function PreviewModal({ isOpen, onClose, test = {}, content = [] 
     }
   };
 
+  if (!hasStarted) {
+    return <StartScreen onStart={handleStart} testType={test.type} />;
+  }
+
+  return (
+    <>
+      <NavigationBar 
+        currentSection={currentSection + 1}
+        totalSections={test.type === 'writing' ? content.length : sections.length}
+        timeRemaining={timeRemaining}
+      />
+      
+      <div className="flex-1 overflow-auto p-6">
+        {test.type === 'writing' ? (
+          <WritingPreview 
+            prompt={getCurrentContent()}
+            response={essayResponse}
+            onChange={handleEssayChange}
+          />
+        ) : (
+          <QuestionPreview 
+            section={getCurrentContent()}
+            type={test.type}
+            responses={responses}
+            onSelect={handleOptionSelect}
+          />
+        )}
+      </div>
+
+      <FooterNav 
+        onNext={() => {
+          const maxSections = test.type === 'writing' ? content.length : sections.length;
+          if (currentSection === maxSections - 1) {
+            handleSubmit();
+          } else {
+            setCurrentSection(prev => prev + 1);
+          }
+        }}
+        onPrev={() => setCurrentSection(prev => prev - 1)}
+        isLastSection={currentSection === (test.type === 'writing' ? content.length - 1 : sections.length - 1)}
+        isFirstSection={currentSection === 0}
+      />
+    </>
+  );
+}
+
+// Main PreviewModal component - no conditional logic that affects hook order
+export default function PreviewModal({ isOpen, onClose, test = {}, content = [] }) {
+  if (!isOpen) {
+    return null;
+  }
+
+  // Ensure we have a container even when showing errors
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <div className="bg-white w-full max-w-5xl h-[90vh] flex flex-col rounded-lg">
-        {!hasStarted ? (
-          <StartScreen onStart={handleStart} testType={test.type} />
+        {!test || !test.type ? (
+          <ErrorModal onClose={onClose} />
         ) : (
-          <>
-            <NavigationBar 
-              currentSection={currentSection + 1}
-              totalSections={test.type === 'writing' ? content.length : sections.length}
-              timeRemaining={timeRemaining}
-            />
-            
-            <div className="flex-1 overflow-auto p-6">
-              {test.type === 'writing' ? (
-                <WritingPreview 
-                  prompt={getCurrentContent()}
-                  response={essayResponse}
-                  onChange={handleEssayChange}
-                />
-              ) : (
-                <QuestionPreview 
-                  section={getCurrentContent()}
-                  type={test.type}
-                  responses={responses}
-                  onSelect={handleOptionSelect}
-                />
-              )}
-            </div>
-
-            <FooterNav 
-              onNext={() => {
-                const maxSections = test.type === 'writing' ? content.length : sections.length;
-                if (currentSection === maxSections - 1) {
-                  handleSubmit();
-                } else {
-                  setCurrentSection(prev => prev + 1);
-                }
-              }}
-              onPrev={() => setCurrentSection(prev => prev - 1)}
-              isLastSection={currentSection === (test.type === 'writing' ? content.length - 1 : sections.length - 1)}
-              isFirstSection={currentSection === 0}
-            />
-          </>
+          <ModalContent test={test} content={content} onClose={onClose} />
         )}
       </div>
     </div>
