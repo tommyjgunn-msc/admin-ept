@@ -1,4 +1,4 @@
-// pages/admin/tests.js
+// pages/admin/tests.js with Duplicate functionality
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 
@@ -6,6 +6,7 @@ export default function Tests() {
   const [tests, setTests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [duplicating, setDuplicating] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -71,6 +72,45 @@ export default function Tests() {
     }
   };
 
+  const duplicateTest = async (testId) => {
+    // Format today's date in YYYY-MM-DD format
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, '0');
+    const day = String(today.getDate()).padStart(2, '0');
+    const todayDate = `${year}-${month}-${day}`;
+    
+    if (!window.confirm(`Are you sure you want to duplicate this test to today (${todayDate})?`)) return;
+    
+    setDuplicating(true);
+    try {
+      const response = await fetch('/api/duplicate-test', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          sourceTestId: testId,
+          newTestDate: todayDate
+        }),
+      });
+      
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to duplicate test');
+      }
+      
+      alert('Test duplicated successfully for today');
+      fetchTests(); // Refresh the list
+    } catch (error) {
+      setError(error.message);
+      alert(`Error duplicating test: ${error.message}`);
+    } finally {
+      setDuplicating(false);
+    }
+  };
+
    // Status badge styles
    const statusStyles = {
     upcoming: 'bg-blue-100 text-blue-800',
@@ -100,6 +140,7 @@ export default function Tests() {
           <button
             onClick={() => router.push('/admin/create-test')}
             className="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700"
+            disabled={duplicating}
           >
             Create New Test
           </button>
@@ -145,6 +186,13 @@ export default function Tests() {
                       </div>
                     </div>
                     <div className="flex space-x-3">
+                      <button
+                        onClick={() => duplicateTest(test.test_id)}
+                        className="text-purple-600 hover:text-purple-900"
+                        disabled={duplicating}
+                      >
+                        {duplicating ? 'Duplicating...' : 'Duplicate'}
+                      </button>
                       <button
                         onClick={() => router.push(`/admin/edit-test/${test.test_id}`)}
                         className="text-indigo-600 hover:text-indigo-900"
