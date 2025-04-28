@@ -8,12 +8,12 @@ export function validateTestScheduling(test) {
     const validations = {
       isInFuture: testDate > now,
       isWithinThreeWeeks: testDate <= threeWeeksFromNow,
-      isOnValidDay: testDate.getDay() === 5, // Friday
+      isOnValidDay: true, // Changed from testDate.getDay() === 5 to allow any day
       hasNoConflicts: true // We'll check this against existing tests
     };
   
     return validations;
-  }
+}
   
   export async function checkScheduleConflicts(sheets, testDate, testType) {
     // Check for existing tests on the same date
