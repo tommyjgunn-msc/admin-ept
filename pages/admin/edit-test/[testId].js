@@ -5,13 +5,49 @@ import PreviewModal from '../../../components/PreviewModal';
 import WritingTestEditor from '../../../components/WritingTestEditor';
 import QuestionTestEditor from '../../../components/QuestionTestEditor';
 
-const formatContentForAPI = (sections) => {
-  if (!Array.isArray(sections)) return [];
-  
-  return sections.flatMap((section, sIndex) => {
-    if (!section.questions) return [];
-    
-    return section.questions.map((question, qIndex) => [
+// Convert the raw spreadsheet rows the API returns into the structured shape
+// the editors and the PUT handler both expect. Done once, on load, so that
+// test.content has a single consistent shape for the entire edit session
+// (previously it flipped between rows and objects depending on what you edited,
+// which caused saves to either 500 or silently wipe content).
+const rowsToSections = (rows) =>
+  (rows || []).reduce((acc, [
+    _, sectionIndex, title, content, questionIndex, text, optionsJson, correctAnswer, points
+  ]) => {
+    const sIdx = parseInt(sectionIndex) - 1;
+    if (Number.isNaN(sIdx) || sIdx < 0) return acc;
+    if (!acc[sIdx]) {
+      acc[sIdx] = { title: title || '', content: content || '', questions: [] };
+    }
+    let options = [];
+    try {
+      options = JSON.parse(optionsJson || '[]');
+    } catch (error) {
+      console.error('Error parsing options:', error);
+    }
+    acc[sIdx].questions[parseInt(questionIndex) - 1] = {
+      text: text || '',
+      options,
+      correctAnswer: correctAnswer || '',
+      points: parseInt(points) || 1
+    };
+    return acc;
+  }, []);
+
+const rowsToPrompts = (rows) =>
+  (rows || []).map(([_, promptIndex, type, text, wordLimit]) => ({
+    type: type || 'argumentative',
+    text: text || '',
+    wordLimit: parseInt(wordLimit) || 500
+  }));
+
+// PreviewModal consumes raw rows for reading/listening but structured prompts
+// for writing. Bridge the (now structured) test.content back to that shape.
+const formatContentForPreview = (test) => {
+  if (!test || !Array.isArray(test.content)) return [];
+  if (test.type === 'writing') return test.content;
+  return test.content.flatMap((section, sIndex) =>
+    (section?.questions || []).map((question, qIndex) => [
       null,
       (sIndex + 1).toString(),
       section.title || '',
@@ -20,51 +56,9 @@ const formatContentForAPI = (sections) => {
       question.text || '',
       JSON.stringify(question.options || []),
       question.correctAnswer || '',
-      (question.points || 1).toString()
-    ]);
-  });
-};
-
-const formatContentForPreview = (test) => {
-  if (!test || !test.content) return [];
-  
-  if (test.type === 'writing') {
-    return test.content; // Writing content works as-is
-  } 
-  
-  // For reading/listening tests, transform raw content into sections
-  // This matches the structure used in QuestionTestEditor
-  return test.content.reduce((sections, [
-    _, sectionIndex, title, content, questionIndex, questionText, optionsJson, correctAnswer
-  ]) => {
-    const idx = parseInt(sectionIndex) - 1;
-    if (!sections[idx]) {
-      sections[idx] = {
-        title,
-        content,
-        questions: []
-      };
-    }
-    
-    try {
-      const options = JSON.parse(optionsJson || '[]');
-      // Ensure questions array exists
-      if (!sections[idx].questions) {
-        sections[idx].questions = [];
-      }
-      
-      // Create the question at the specific index
-      sections[idx].questions[parseInt(questionIndex) - 1] = {
-        text: questionText,
-        options: options,
-        correctAnswer
-      };
-    } catch (error) {
-      console.error("Error parsing options:", error);
-    }
-    
-    return sections;
-  }, []);
+      (question.points ?? 1).toString()
+    ])
+  );
 };
 
 export default function EditTest() {
@@ -86,7 +80,10 @@ export default function EditTest() {
       const response = await fetch(`/api/tests/${testId}`);
       if (!response.ok) throw new Error('Failed to fetch test');
       const data = await response.json();
-      setTest(data);
+      const content = data.type === 'writing'
+        ? rowsToPrompts(data.content)
+        : rowsToSections(data.content);
+      setTest({ ...data, content });
     } catch (error) {
       setError(error.message);
     } finally {
@@ -98,20 +95,14 @@ export default function EditTest() {
     e.preventDefault();
     setSaving(true);
     try {
-      // Format the content properly before sending
-      const formattedTest = {
-        ...test,
-        content: formatContentForAPI(test.content)
-      };
-  
-      console.log('Sending formatted test:', formattedTest); // Debug log
-  
+      // test.content is already in the structured shape the API expects
+      // (sections with questions, or writing prompts), so send it as-is.
       const response = await fetch(`/api/tests/${testId}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(formattedTest),
+        body: JSON.stringify(test),
       });
   
       if (!response.ok) {
@@ -267,91 +258,7 @@ export default function EditTest() {
         onClose={() => setShowFullPreview(false)}
         test={test}
         content={formatContentForPreview(test)}
-    >
-        <div className="space-y-8">
-          <div className="bg-gray-50 p-6 rounded-lg">
-            <h2 className="text-2xl font-bold mb-6">{test.title}</h2>
-            {test.description && (
-              <p className="text-gray-600 mb-6">{test.description}</p>
-            )}
-            
-            {test.type === 'writing' ? (
-              // Writing Test Preview
-              <div className="space-y-8">
-                {test.content.map((prompt, index) => (
-                  <div key={index} className="border rounded-lg p-6">
-                    <div className="mb-4">
-                      <span className="text-sm font-medium text-gray-500 uppercase">
-                        {prompt[2]} Essay
-                      </span>
-                    </div>
-                    <div className="prose max-w-none">
-                      <p className="text-lg">{prompt[3]}</p>
-                    </div>
-                    <div className="mt-4 text-sm text-gray-500">
-                      Word limit: {prompt[4]} words
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              // Reading/Listening Test Preview
-              <div className="space-y-12">
-                {test.content.reduce((sections, [
-                  _, sectionIndex, title, content, questionIndex, questionText, optionsJson, correctAnswer
-                ]) => {
-                  const idx = parseInt(sectionIndex) - 1;
-                  if (!sections[idx]) {
-                    sections[idx] = {
-                      title,
-                      content,
-                      questions: []
-                    };
-                  }
-                  sections[idx].questions[parseInt(questionIndex) - 1] = {
-                    text: questionText,
-                    options: JSON.parse(optionsJson),
-                    correctAnswer
-                  };
-                  return sections;
-                }, []).map((section, sectionIndex) => (
-                  <div key={sectionIndex} className="space-y-6">
-                    <div className="bg-white p-6 rounded-lg shadow">
-                      <h3 className="text-xl font-medium mb-4">{section.title}</h3>
-                      {test.type === 'reading' && (
-                        <div className="prose max-w-none mb-8">
-                          {section.content}
-                        </div>
-                      )}
-                      <div className="space-y-6">
-                        {section.questions.map((question, questionIndex) => (
-                          <div key={questionIndex} className="border rounded-lg p-4">
-                            <p className="font-medium mb-3">
-                              {questionIndex + 1}. {question.text}
-                            </p>
-                            <div className="space-y-2 ml-4">
-                              {question.options.map((option, optIndex) => (
-                                <div key={optIndex} className="flex items-center space-x-2">
-                                  <input
-                                    type="radio"
-                                    name={`preview-${sectionIndex}-${questionIndex}`}
-                                    disabled
-                                  />
-                                  <label>{option}</label>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-      </PreviewModal>
+    />
     </div>
   );
 }

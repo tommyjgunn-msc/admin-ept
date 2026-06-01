@@ -87,13 +87,6 @@ export default async function handler(req, res) {
       });
     }
 
-    if (!scheduleValidation.isWithinThreeWeeks) {
-      return res.status(400).json({
-        error: 'date_too_far',
-        message: 'Test date must be within three weeks'
-      });
-    }
-
     if (!scheduleValidation.isOnValidDay) {
       return res.status(400).json({
         error: 'invalid_day',

@@ -1,13 +1,17 @@
 // utils/scheduleValidation.js
 export function validateTestScheduling(test) {
-    const testDate = new Date(test.test_date);
-    const now = new Date();
-    const threeWeeksFromNow = new Date();
-    threeWeeksFromNow.setDate(now.getDate() + 21);
-  
+    // Parse 'YYYY-MM-DD' as a LOCAL date. Using new Date('YYYY-MM-DD') parses as
+    // UTC midnight, which compared against a local "now" made today read as past
+    // — that's why same-day tests were wrongly rejected.
+    const [year, month, day] = String(test.test_date || '').split('-').map(Number);
+    const testDate = new Date(year, (month || 1) - 1, day || 1);
+    testDate.setHours(0, 0, 0, 0);
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
     const validations = {
-      isInFuture: testDate > now,
-      isWithinThreeWeeks: testDate <= threeWeeksFromNow,
+      isInFuture: testDate >= today, // allow same-day scheduling
       isOnValidDay: true, // Changed from testDate.getDay() === 5 to allow any day
       hasNoConflicts: true // We'll check this against existing tests
     };

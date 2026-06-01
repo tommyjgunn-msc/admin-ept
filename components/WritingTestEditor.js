@@ -3,14 +3,11 @@ import { useState } from 'react';
 import PreviewModal from './PreviewModal';
 
 export default function WritingTestEditor({ content, onChange }) {
-  // Transform content array format to structured data
-  const initialPrompts = content.map(([
-    _, promptIndex, type, text, wordLimit
-  ]) => ({
-    type,
-    text,
-    wordLimit: parseInt(wordLimit)
-  })) || [];
+  // content is already structured prompts (transformed once on load by the
+  // edit page). Fall back to a single default prompt when there's nothing yet.
+  const initialPrompts = (Array.isArray(content) && content.length > 0)
+    ? content
+    : [{ type: 'argumentative', text: '', wordLimit: 500 }];
 
   const [prompts, setPrompts] = useState(initialPrompts);
   const [previewPrompt, setPreviewPrompt] = useState(null);

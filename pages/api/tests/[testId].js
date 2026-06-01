@@ -189,9 +189,15 @@ export default async function handler(req, res) {
             });
           }
 
-          // Calculate total points based on content
-          const totalPoints = type === 'writing' ? 50 : content.reduce((sum, item) => 
-            sum + (parseInt(item.points) || 0), 0);
+          // Calculate total points from the structured content
+          // (sections -> questions). Writing is always a flat 50.
+          const totalPoints = type === 'writing'
+            ? 50
+            : content.reduce((sum, section) =>
+                sum + (section.questions || []).reduce(
+                  (sectionSum, question) => sectionSum + (parseInt(question.points) || 0),
+                  0
+                ), 0);
 
           // Update test metadata
           const updatedTest = [

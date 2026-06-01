@@ -3,36 +3,20 @@ import { useState } from 'react';
 import PreviewModal from './PreviewModal';
 
 export default function QuestionTestEditor({ type, content, onChange }) {
-  // Transform content array format to structured data
-  const initialSections = (content || []).reduce((acc, [
-    _, sectionIndex, sectionTitle, sectionContent, 
-    questionIndex, questionText, optionsJson, correctAnswer, points
-  ]) => {
-    const sectionIdx = parseInt(sectionIndex) - 1;
-    if (!acc[sectionIdx]) {
-      acc[sectionIdx] = {
-        title: sectionTitle,
-        content: sectionContent,
-        questions: []
-      };
-    }
-    acc[sectionIdx].questions[parseInt(questionIndex) - 1] = {
-      text: questionText,
-      options: JSON.parse(optionsJson),
-      correctAnswer,
-      points: parseInt(points)
-    };
-    return acc;
-  }, []) || [{
-    title: '',
-    content: '',
-    questions: [{
-      text: '',
-      options: ['', '', '', ''],
-      correctAnswer: '',
-      points: 1
-    }]
-  }];
+  // content is already structured sections (transformed once on load by the
+  // edit page). Fall back to a single empty section when there's nothing yet.
+  const initialSections = (Array.isArray(content) && content.length > 0)
+    ? content
+    : [{
+        title: '',
+        content: '',
+        questions: [{
+          text: '',
+          options: ['', '', '', ''],
+          correctAnswer: '',
+          points: 1
+        }]
+      }];
 
   const [sections, setSections] = useState(initialSections);
   const [previewSection, setPreviewSection] = useState(null);
@@ -107,24 +91,10 @@ export default function QuestionTestEditor({ type, content, onChange }) {
           points: 1
         }];
       }
-      
-      // Transform sections back to expected format before calling onChange
-      const formattedContent = newSections.flatMap((section, sIndex) => 
-        section.questions.map((question, qIndex) => [
-          null, // placeholder for _
-          (sIndex + 1).toString(),
-          section.title,
-          section.content,
-          (qIndex + 1).toString(),
-          question.text,
-          JSON.stringify(question.options),
-          question.correctAnswer,
-          question.points.toString()
-        ])
-      );
-      
+
+      // Emit structured sections, consistent with every other handler.
       setSections(newSections);
-      onChange(formattedContent);
+      onChange(newSections);
     }
   };
   
