@@ -90,7 +90,7 @@ export default async function handler(req, res) {
     if (!scheduleValidation.isOnValidDay) {
       return res.status(400).json({
         error: 'invalid_day',
-        message: 'Tests must be scheduled on Fridays'
+        message: 'Tests must be scheduled on Wednesdays or Fridays'
       });
     }
 

@@ -12,7 +12,7 @@ export function validateTestScheduling(test) {
 
     const validations = {
       isInFuture: testDate >= today, // allow same-day scheduling
-      isOnValidDay: true, // Changed from testDate.getDay() === 5 to allow any day
+      isOnValidDay: testDate.getDay() === 3 || testDate.getDay() === 5, // Tests run on Wednesdays and Fridays
       hasNoConflicts: true // We'll check this against existing tests
     };
   
