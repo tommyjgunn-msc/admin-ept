@@ -49,13 +49,13 @@ export default function TestStats() {
   if (!test || !stats) return <div>Test not found</div>;
 
   return (
-    <div className="min-h-screen bg-gray-100 py-12 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-ftm-night py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="flex justify-between items-center mb-8">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">{test.title}</h1>
-            <p className="mt-1 text-sm text-gray-500">
+            <h1 className="text-2xl font-bold text-ftm-ink">{test.title}</h1>
+            <p className="mt-1 text-sm text-ftm-mut">
               Test Date: {new Date(test.test_date).toLocaleDateString()}
             </p>
           </div>
@@ -64,7 +64,7 @@ export default function TestStats() {
             <select 
               value={timeRange}
               onChange={(e) => filterStats(e.target.value)}
-              className="rounded-md border-gray-300 shadow-sm"
+              className="rounded-md border-white/[.16] shadow-sm"
             >
               <option value="all">All Time</option>
               <option value="week">Past Week</option>
@@ -72,7 +72,7 @@ export default function TestStats() {
             </select>
             <button
               onClick={() => router.push('/admin/tests')}
-              className="text-gray-600 hover:text-gray-900"
+              className="text-ftm-mut hover:text-ftm-ink"
             >
               Back to Tests
             </button>
@@ -101,8 +101,8 @@ export default function TestStats() {
         </div>
 
         {/* Score Distribution */}
-        <div className="bg-white shadow rounded-lg p-6 mb-8">
-          <h3 className="text-lg font-medium text-gray-900 mb-6">Score Distribution</h3>
+        <div className="bg-ftm-card shadow rounded-lg p-6 mb-8">
+          <h3 className="text-lg font-medium text-ftm-ink mb-6">Score Distribution</h3>
           <div className="space-y-4">
             {[
               { range: '90-100%', percentage: stats.scoreRanges?.['90-100'] || 0 },
@@ -122,8 +122,8 @@ export default function TestStats() {
 
         {/* Question Analysis */}
         {test.type !== 'writing' && (
-          <div className="bg-white shadow rounded-lg p-6">
-            <h3 className="text-lg font-medium text-gray-900 mb-6">
+          <div className="bg-ftm-card shadow rounded-lg p-6">
+            <h3 className="text-lg font-medium text-ftm-ink mb-6">
               Question Performance
             </h3>
             <div className="space-y-6">
@@ -131,18 +131,18 @@ export default function TestStats() {
                 <div key={index} className="border-t pt-4">
                   <div className="flex justify-between items-start mb-4">
                     <div className="flex-1">
-                      <p className="font-medium text-gray-900">
+                      <p className="font-medium text-ftm-ink">
                         Question {index + 1}
                       </p>
-                      <p className="text-sm text-gray-500 mt-1">
+                      <p className="text-sm text-ftm-mut mt-1">
                         {question.text}
                       </p>
                     </div>
                     <div className="text-right">
-                      <p className="text-sm font-medium text-indigo-600">
+                      <p className="text-sm font-medium text-ftm-slate">
                         {question.correctPercentage}% correct
                       </p>
-                      <p className="text-xs text-gray-500 mt-1">
+                      <p className="text-xs text-ftm-mut mt-1">
                         {question.totalAttempts} attempts
                       </p>
                     </div>

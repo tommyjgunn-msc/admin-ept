@@ -1,6 +1,7 @@
-// pages/admin/tests.js with Duplicate functionality
+// pages/admin/tests.js — Futurimi test management (dense grouped rows)
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
+import AdminShell from '../../components/AdminShell';
 
 export default function Tests() {
   const [tests, setTests] = useState([]);
@@ -29,7 +30,7 @@ export default function Tests() {
       const groupedTests = data.reduce((acc, test) => {
         const date = new Date(test.test_date);
         const dateKey = date.toISOString().split('T')[0];
-        
+
         // Calculate test status
         const today = new Date();
         let status = 'upcoming';
@@ -79,9 +80,9 @@ export default function Tests() {
     const month = String(today.getMonth() + 1).padStart(2, '0');
     const day = String(today.getDate()).padStart(2, '0');
     const todayDate = `${year}-${month}-${day}`;
-    
+
     if (!window.confirm(`Are you sure you want to duplicate this test to today (${todayDate})?`)) return;
-    
+
     setDuplicating(true);
     try {
       const response = await fetch('/api/duplicate-test', {
@@ -94,13 +95,13 @@ export default function Tests() {
           newTestDate: todayDate
         }),
       });
-      
+
       const data = await response.json();
-      
+
       if (!response.ok) {
         throw new Error(data.message || 'Failed to duplicate test');
       }
-      
+
       alert('Test duplicated successfully for today');
       fetchTests(); // Refresh the list
     } catch (error) {
@@ -111,120 +112,119 @@ export default function Tests() {
     }
   };
 
-   // Status badge styles
-   const statusStyles = {
-    upcoming: 'bg-blue-100 text-blue-800',
-    active: 'bg-green-100 text-green-800',
-    completed: 'bg-gray-100 text-gray-800'
+  // Status chip styles (dark theme)
+  const statusStyles = {
+    upcoming: 'text-ftm-indigo bg-ftm-indigo/[.14]',
+    active: 'text-ftm-green bg-ftm-green/[.14]',
+    completed: 'text-ftm-dim2 bg-ftm-slate/[.14]'
   };
 
-
   if (loading) return (
-    <div className="min-h-screen flex items-center justify-center">
-      <p>Loading tests...</p>
-    </div>
+    <AdminShell>
+      <div className="flex items-center justify-center py-24">
+        <p className="text-ftm-mut">Loading tests&hellip;</p>
+      </div>
+    </AdminShell>
   );
 
   if (error) return (
-    <div className="min-h-screen flex items-center justify-center">
-      <p className="text-red-600">Error: {error}</p>
-    </div>
+    <AdminShell>
+      <div className="flex items-center justify-center py-24">
+        <p className="text-ftm-red">Error: {error}</p>
+      </div>
+    </AdminShell>
   );
 
   return (
-    <div className="min-h-screen bg-gray-100">
-      <div className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+    <AdminShell>
+      <div className="max-w-[1160px] mx-auto">
         {/* Header */}
-        <div className="flex justify-between items-center mb-8">
-          <h1 className="text-2xl font-bold text-gray-900">Test Management</h1>
+        <div className="flex justify-between items-center mb-5">
+          <h1 className="font-grotesk font-bold text-[19px] text-ftm-ink">Test management</h1>
           <button
             onClick={() => router.push('/admin/create-test')}
-            className="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700"
+            className="font-inter font-semibold text-[12.5px] text-white bg-ftm-red hover:bg-[#C51F35] rounded-md px-4 py-[9px] transition-colors disabled:opacity-50"
             disabled={duplicating}
           >
-            Create New Test
+            + Create new test
           </button>
         </div>
-  
-        {/* Test List */}
-        <div className="space-y-8">
-          {Object.entries(tests).map(([date, dateTests]) => (
-            <div key={date} className="bg-white shadow overflow-hidden sm:rounded-lg">
-            <div className="px-4 py-5 border-b border-gray-200 sm:px-6">
-              <h3 className="text-lg leading-6 font-medium text-gray-900">
-                Tests for {new Date(date).toLocaleDateString('en-US', {
-                  weekday: 'long',
-                  year: 'numeric',
-                  month: 'long',
-                  day: 'numeric'
-                })}
-              </h3>
+
+        {/* Test groups by date */}
+        <div className="space-y-[18px]">
+          {Object.entries(tests).map(([date, dateTests]) => {
+            const groupStatus = dateTests.some(t => t.status === 'active')
+              ? 'active'
+              : dateTests.every(t => t.status === 'completed') ? 'completed' : 'upcoming';
+            return (
+              <div key={date}>
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="font-inter font-semibold text-[11px] text-ftm-ink uppercase tracking-[.06em]">
+                    {new Date(date).toLocaleDateString('en-US', {
+                      weekday: 'long',
+                      year: 'numeric',
+                      month: 'long',
+                      day: 'numeric'
+                    })} &middot; ALU Kigali
+                  </span>
+                  <span className={`font-inter font-semibold text-[10.5px] px-[7px] py-0.5 rounded-full ${statusStyles[groupStatus]}`}>
+                    {groupStatus}
+                  </span>
+                </div>
+                <div className="bg-ftm-card border border-white/[.08] rounded-lg overflow-hidden">
+                  {dateTests.map((test, idx) => (
+                    <div
+                      key={test.test_id}
+                      className={`flex flex-wrap items-center gap-y-2 px-4 py-[11px] ${idx < dateTests.length - 1 ? 'border-b border-white/[.06]' : ''}`}
+                    >
+                      <div className="flex-[2] min-w-[220px]">
+                        <span className="font-inter font-semibold text-[13px] text-ftm-ink">{test.title}</span>
+                        <span className="font-inter text-xs text-ftm-dim ml-2 capitalize">{test.type} test</span>
+                      </div>
+                      <div className="flex-1 font-inter text-[12.5px] text-ftm-dim2">{test.total_points} pts</div>
+                      <div className="flex-1 font-inter text-[12.5px] text-ftm-dim2">
+                        {test.status === 'completed' ? `${test.submissions_count || 0} submissions` : ''}
+                      </div>
+                      <div className="flex-none flex gap-3.5">
+                        <button
+                          onClick={() => duplicateTest(test.test_id)}
+                          className="font-inter font-semibold text-xs text-ftm-slate hover:text-ftm-ink transition-colors disabled:opacity-50"
+                          disabled={duplicating}
+                        >
+                          {duplicating ? 'Duplicating…' : 'Duplicate'}
+                        </button>
+                        <button
+                          onClick={() => router.push(`/admin/edit-test/${test.test_id}`)}
+                          className="font-inter font-semibold text-xs text-ftm-slate hover:text-ftm-ink transition-colors"
+                        >
+                          Edit
+                        </button>
+                        <button
+                          onClick={() => router.push(`/admin/test-stats/${test.test_id}`)}
+                          className="font-inter font-semibold text-xs text-ftm-green hover:brightness-125 transition-all"
+                        >
+                          Stats
+                        </button>
+                        <button
+                          onClick={() => deleteTest(test.test_id)}
+                          className="font-inter font-semibold text-xs text-ftm-red hover:brightness-125 transition-all"
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
+          {Object.keys(tests).length === 0 && (
+            <div className="text-center py-12 bg-ftm-card border border-white/[.08] rounded-lg">
+              <p className="text-ftm-dim">No tests created yet.</p>
             </div>
-            <ul className="divide-y divide-gray-200">
-              {dateTests.map((test) => (
-                <li key={test.test_id} className="px-4 py-4 sm:px-6">
-                  <div className="flex items-center justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center">
-                        <h4 className="text-lg font-medium text-indigo-600">{test.title}</h4>
-                        <span className={`ml-2 px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${statusStyles[test.status]}`}>
-                          {test.status}
-                        </span>
-                      </div>
-                      <div className="mt-2 flex items-center text-sm text-gray-500">
-                        <span className="capitalize">{test.type} Test</span>
-                        <span className="mx-2">•</span>
-                        <span>{test.total_points} points</span>
-                        {test.status === 'completed' && (
-                          <>
-                            <span className="mx-2">•</span>
-                            <span>
-                              {test.submissions_count || 0} submissions
-                            </span>
-                          </>
-                        )}
-                      </div>
-                    </div>
-                    <div className="flex space-x-3">
-                      <button
-                        onClick={() => duplicateTest(test.test_id)}
-                        className="text-purple-600 hover:text-purple-900"
-                        disabled={duplicating}
-                      >
-                        {duplicating ? 'Duplicating...' : 'Duplicate'}
-                      </button>
-                      <button
-                        onClick={() => router.push(`/admin/edit-test/${test.test_id}`)}
-                        className="text-indigo-600 hover:text-indigo-900"
-                      >
-                        Edit
-                      </button>
-                      <button
-                        onClick={() => router.push(`/admin/test-stats/${test.test_id}`)}
-                        className="text-green-600 hover:text-green-900"
-                      >
-                        Stats
-                      </button>
-                      <button
-                        onClick={() => deleteTest(test.test_id)}
-                        className="text-red-600 hover:text-red-900"
-                      >
-                        Delete
-                      </button>
-                    </div>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          </div>
-        ))}
-        {Object.keys(tests).length === 0 && (
-          <div className="text-center py-12">
-            <p className="text-gray-500">No tests created yet.</p>
-          </div>
-        )}
+          )}
+        </div>
       </div>
-    </div>
-  </div>
-);
+    </AdminShell>
+  );
 }

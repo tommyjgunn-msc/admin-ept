@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useRouter } from 'next/router';
+import { FuturimiWordmark, AluMark } from '../components/Futurimi';
 
 export default function AdminLogin() {
   const [username, setUsername] = useState('');
@@ -40,63 +41,64 @@ export default function AdminLogin() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full space-y-8">
-        <div>
-          <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
-            EPT Admin Login
-          </h2>
+    <div className="min-h-screen flex items-center justify-center bg-ftm-night py-12 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-md w-full">
+        <div className="flex flex-col items-center mb-8">
+          <AluMark height={14} opacity={0.5} className="mb-4" />
+          <FuturimiWordmark size={32} ink="#F3F0EA" diamond="#E0273F" />
+          <p className="font-inter text-sm text-ftm-dim mt-3">Admin console</p>
         </div>
-        <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
-          <div className="rounded-md shadow-sm -space-y-px">
+
+        <div className="bg-ftm-card border border-white/[.08] rounded-[10px] p-8">
+          <form className="space-y-5" onSubmit={handleSubmit}>
             <div>
+              <label htmlFor="username" className="block font-inter font-semibold text-xs text-ftm-slate mb-1.5">
+                Username
+              </label>
               <input
                 id="username"
                 name="username"
                 type="text"
                 required
-                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-t-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
+                className="block w-full font-inter text-sm text-ftm-ink placeholder-ftm-dim bg-ftm-night border border-white/[.16] rounded-md px-3.5 py-3 focus:outline-none focus:border-ftm-red focus:ring-1 focus:ring-ftm-red transition-colors"
                 placeholder="Username"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
               />
             </div>
             <div>
+              <label htmlFor="password" className="block font-inter font-semibold text-xs text-ftm-slate mb-1.5">
+                Password
+              </label>
               <input
                 id="password"
                 name="password"
                 type="password"
                 required
-                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
+                className="block w-full font-inter text-sm text-ftm-ink placeholder-ftm-dim bg-ftm-night border border-white/[.16] rounded-md px-3.5 py-3 focus:outline-none focus:border-ftm-red focus:ring-1 focus:ring-ftm-red transition-colors"
                 placeholder="Password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
               />
             </div>
-          </div>
 
-          {error && (
-            <div className="rounded-md bg-red-50 p-4">
-              <div className="flex">
-                <div className="ml-3">
-                  <h3 className="text-sm font-medium text-red-800">{error}</h3>
-                </div>
+            {error && (
+              <div className="rounded-md bg-ftm-red/10 border border-ftm-red/30 p-3.5">
+                <p className="text-sm font-medium text-ftm-red">{error}</p>
               </div>
-            </div>
-          )}
+            )}
 
-          <div>
             <button
               type="submit"
               disabled={isLoading}
-              className={`group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 ${
+              className={`w-full flex justify-center font-inter font-semibold text-sm text-white bg-ftm-red hover:bg-[#C51F35] rounded-md px-5 py-3 shadow-redglow transition-colors ${
                 isLoading ? 'opacity-50 cursor-not-allowed' : ''
               }`}
             >
-              {isLoading ? 'Signing in...' : 'Sign in'}
+              {isLoading ? 'Signing in…' : 'Sign in'}
             </button>
-          </div>
-        </form>
+          </form>
+        </div>
       </div>
     </div>
   );

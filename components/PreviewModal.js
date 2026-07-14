@@ -74,12 +74,12 @@ const transformContent = (rawContent, testType) => {
 function ErrorModal({ onClose }) {
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg p-6">
-        <h2 className="text-xl font-bold text-red-600">Error</h2>
+      <div className="bg-ftm-card rounded-lg p-6">
+        <h2 className="text-xl font-bold text-ftm-red">Error</h2>
         <p className="mt-2">Invalid test data provided.</p>
         <button
           onClick={onClose}
-          className="mt-4 px-4 py-2 bg-gray-200 rounded hover:bg-gray-300"
+          className="mt-4 px-4 py-2 bg-white/10 rounded hover:bg-white/[.14]"
         >
           Close
         </button>
@@ -169,7 +169,7 @@ function ModalContent({ test, content, onClose }) {
       <div className="absolute top-2 right-2 z-10">
         <button 
           onClick={onClose}
-          className="bg-gray-200 text-gray-700 rounded-full p-2 hover:bg-gray-300"
+          className="bg-white/10 text-ftm-slate rounded-full p-2 hover:bg-white/[.14]"
           aria-label="Close preview"
         >
           <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -182,7 +182,7 @@ function ModalContent({ test, content, onClose }) {
       <div className="absolute top-2 right-14 z-10">
         <button 
           onClick={handlePrint}
-          className="bg-gray-200 text-gray-700 rounded-full p-2 hover:bg-gray-300"
+          className="bg-white/10 text-ftm-slate rounded-full p-2 hover:bg-white/[.14]"
           aria-label="Print test"
         >
           <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -191,7 +191,7 @@ function ModalContent({ test, content, onClose }) {
         </button>
       </div>
       
-      <div className="bg-gray-200 px-4 py-2 flex justify-between items-center">
+      <div className="bg-white/10 px-4 py-2 flex justify-between items-center">
         <span>Section {currentSection + 1} of {totalSections}</span>
         <span>Time Remaining: {timeRemaining}</span>
       </div>
@@ -218,8 +218,8 @@ function ModalContent({ test, content, onClose }) {
           onClick={() => setCurrentSection(prev => Math.max(0, prev - 1))}
           disabled={currentSection === 0}
           className={`px-4 py-2 rounded ${currentSection === 0 
-            ? 'text-gray-400 cursor-not-allowed' 
-            : 'text-indigo-600 hover:bg-indigo-50'}`}
+            ? 'text-ftm-dim cursor-not-allowed' 
+            : 'text-ftm-slate hover:bg-ftm-slate/[.12]'}`}
         >
           Previous Section
         </button>
@@ -231,7 +231,7 @@ function ModalContent({ test, content, onClose }) {
               setCurrentSection(prev => prev + 1);
             }
           }}
-          className="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700"
+          className="px-4 py-2 bg-ftm-red text-white rounded hover:bg-[#C51F35]"
         >
           {currentSection >= totalSections - 1 ? 'Close Preview' : 'Next Section'}
         </button>
@@ -251,8 +251,8 @@ export default function PreviewModal({ isOpen, onClose, test = {}, content = [] 
 
   // Ensure we have a container even when showing errors
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 print:bg-white print:bg-opacity-100">
-      <div className="bg-white w-full max-w-5xl h-[90vh] flex flex-col rounded-lg relative print:h-auto print:max-h-none">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 print:bg-ftm-card print:bg-opacity-100">
+      <div className="bg-ftm-card w-full max-w-5xl h-[90vh] flex flex-col rounded-lg relative print:h-auto print:max-h-none">
         {!test || !test.type ? (
           <ErrorModal onClose={onClose} />
         ) : (
@@ -275,14 +275,14 @@ function WritingPreview({ prompt, response, onChange }) {
 
   return (
     <div className="space-y-6">
-      <div className="bg-gray-50 p-6 rounded-lg">
+      <div className="bg-ftm-up p-6 rounded-lg">
         <div className="mb-4">
-          <span className="uppercase text-sm font-semibold text-gray-600">
+          <span className="uppercase text-sm font-semibold text-ftm-mut">
             {promptType} ESSAY
           </span>
         </div>
         <p className="text-lg mb-4">{promptText}</p>
-        <p className="text-sm text-gray-600">Word limit: {wordLimit} words</p>
+        <p className="text-sm text-ftm-mut">Word limit: {wordLimit} words</p>
       </div>
 
       <div className="mt-6">
@@ -293,7 +293,7 @@ function WritingPreview({ prompt, response, onChange }) {
           className="w-full h-64 p-4 border rounded-lg resize-none"
           rows={10}
         />
-        <div className="mt-2 text-sm text-gray-500 flex justify-between">
+        <div className="mt-2 text-sm text-ftm-mut flex justify-between">
           <span>Word count: {response.trim().split(/\s+/).length || 0}</span>
           <span>{wordLimit} words maximum</span>
         </div>
@@ -307,13 +307,13 @@ function QuestionPreview({ section, type, responses, onSelect }) {
   console.log("QuestionPreview received section:", section);
   
   if (!section) {
-    return <div className="p-4 bg-yellow-100 border border-yellow-400 rounded">
+    return <div className="p-4 bg-ftm-amber/[.14] border border-ftm-amber/50 rounded">
       No section data available
     </div>;
   }
   
   if (!section.questions || !Array.isArray(section.questions) || section.questions.length === 0) {
-    return <div className="p-4 bg-yellow-100 border border-yellow-400 rounded">
+    return <div className="p-4 bg-ftm-amber/[.14] border border-ftm-amber/50 rounded">
       <p>No questions available for this section.</p>
       <p className="mt-2"><strong>Debug info:</strong></p>
       <pre className="mt-1 text-xs overflow-auto">{JSON.stringify(section, null, 2)}</pre>
@@ -324,7 +324,7 @@ function QuestionPreview({ section, type, responses, onSelect }) {
     <div className="space-y-8">
       {/* Reading Passage or Listening Instructions */}
       {type === 'reading' && section.content && (
-        <div className="bg-gray-50 p-6 rounded-lg prose max-w-none">
+        <div className="bg-ftm-up p-6 rounded-lg prose max-w-none">
           <h3 className="font-medium text-lg mb-4">{section.title}</h3>
           <div className="whitespace-pre-wrap">{section.content}</div>
         </div>
@@ -341,14 +341,14 @@ function QuestionPreview({ section, type, responses, onSelect }) {
               {Array.isArray(question.options) && question.options.map((option, oIndex) => (
                 <label 
                   key={oIndex} 
-                  className="flex items-center space-x-3 cursor-pointer hover:bg-gray-50 p-2 rounded"
+                  className="flex items-center space-x-3 cursor-pointer hover:bg-ftm-up p-2 rounded"
                 >
                   <input
                     type="radio"
                     name={`question-${qIndex}`}
                     checked={responses[qIndex] === option}
                     onChange={() => onSelect(qIndex, option)}
-                    className="h-4 w-4 text-indigo-600"
+                    className="h-4 w-4 text-ftm-slate"
                   />
                   <span>{option}</span>
                 </label>

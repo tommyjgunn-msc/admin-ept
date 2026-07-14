@@ -142,7 +142,7 @@ export default function EditTest() {
 
   if (error) return (
     <div className="min-h-screen flex items-center justify-center">
-      <p className="text-red-600">Error: {error}</p>
+      <p className="text-ftm-red">Error: {error}</p>
     </div>
   );
 
@@ -153,22 +153,22 @@ export default function EditTest() {
   );
 
   return (
-    <div className="min-h-screen bg-gray-100 py-12 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-ftm-night py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-3xl mx-auto">
-        <div className="bg-white shadow rounded-lg p-6">
+        <div className="bg-ftm-card shadow rounded-lg p-6">
           <div className="flex justify-between items-center mb-6">
             <h1 className="text-2xl font-bold">Edit {test.type.charAt(0).toUpperCase() + test.type.slice(1)} Test</h1>
             <div className="flex space-x-3">
               <button
                 type="button"
                 onClick={() => setShowFullPreview(true)}
-                className="bg-indigo-100 text-indigo-700 px-4 py-2 rounded-md hover:bg-indigo-200"
+                className="bg-ftm-slate/[.14] text-ftm-slate px-4 py-2 rounded-md hover:bg-ftm-slate/[.2]"
               >
                 Preview Test
               </button>
               <button
                 onClick={() => router.push('/admin/tests')}
-                className="text-gray-600 hover:text-gray-900"
+                className="text-ftm-mut hover:text-ftm-ink"
               >
                 Back to Tests
               </button>
@@ -179,39 +179,39 @@ export default function EditTest() {
             {/* Test Metadata */}
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700">
+                <label className="block text-sm font-medium text-ftm-slate">
                   Title
                 </label>
                 <input
                   type="text"
                   value={test.title}
                   onChange={(e) => updateMetadata('title', e.target.value)}
-                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
+                  className="mt-1 block w-full border border-white/[.16] rounded-md shadow-sm p-2"
                   required
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700">
+                <label className="block text-sm font-medium text-ftm-slate">
                   Test Date
                 </label>
                 <input
                   type="date"
                   value={test.test_date}
                   onChange={(e) => updateMetadata('test_date', e.target.value)}
-                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
+                  className="mt-1 block w-full border border-white/[.16] rounded-md shadow-sm p-2"
                   required
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700">
+                <label className="block text-sm font-medium text-ftm-slate">
                   Description
                 </label>
                 <textarea
                   value={test.description || ''}
                   onChange={(e) => updateMetadata('description', e.target.value)}
-                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
+                  className="mt-1 block w-full border border-white/[.16] rounded-md shadow-sm p-2"
                   rows={3}
                 />
               </div>
@@ -235,14 +235,14 @@ export default function EditTest() {
               <button
                 type="button"
                 onClick={() => router.push('/admin/tests')}
-                className="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50"
+                className="px-4 py-2 border border-white/[.16] rounded-md shadow-sm text-sm font-medium text-ftm-slate hover:bg-ftm-up"
               >
                 Cancel
               </button>
               <button
                 type="submit"
                 disabled={saving}
-                className={`px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 ${
+                className={`px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-ftm-red hover:bg-[#C51F35] ${
                   saving ? 'opacity-50 cursor-not-allowed' : ''
                 }`}
               >
