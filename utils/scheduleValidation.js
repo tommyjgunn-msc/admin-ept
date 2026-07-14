@@ -12,7 +12,8 @@ export function validateTestScheduling(test) {
 
     const validations = {
       isInFuture: testDate >= today, // allow same-day scheduling
-      isOnValidDay: testDate.getDay() === 3 || testDate.getDay() === 5, // Tests run on Wednesdays and Fridays
+      // No day-of-week restriction: a test can run any day. Availability is
+      // simply whether a test exists on a given date (conflict check below).
       hasNoConflicts: true // We'll check this against existing tests
     };
   

@@ -87,13 +87,6 @@ export default async function handler(req, res) {
       });
     }
 
-    if (!scheduleValidation.isOnValidDay) {
-      return res.status(400).json({
-        error: 'invalid_day',
-        message: 'Tests must be scheduled on Wednesdays or Fridays'
-      });
-    }
-
     // Check for schedule conflicts
     const conflicts = await checkScheduleConflicts(sheets, testMetadata.test_date, type);
     if (conflicts.hasConflict) {
