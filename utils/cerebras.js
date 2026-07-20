@@ -8,9 +8,13 @@
 
 const API_URL = 'https://api.cerebras.ai/v1/chat/completions';
 
-// zai-glm-4.7 and gpt-oss-120b are the models available on the account.
-// Override with CEREBRAS_MODEL without a redeploy of this file's logic.
-const DEFAULT_MODEL = 'zai-glm-4.7';
+// Cerebras serves gpt-oss-120b (production), gemma-4-31b (preview) and
+// zai-glm-4.7 (preview) on this account. Default to the production model:
+// zai-glm-4.7 is flagged for deprecation on 2026-08-17, which is inside the
+// window this grader is meant to run in, and a preview model can change under
+// us mid-marking-season.
+// Override with CEREBRAS_MODEL to try another without touching this file.
+const DEFAULT_MODEL = 'gpt-oss-120b';
 
 // Free-tier context is modest; a 500-word essay is ~700 tokens, so this only
 // ever trims pathological submissions rather than real ones.
