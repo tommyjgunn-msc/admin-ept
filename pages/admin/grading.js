@@ -63,77 +63,101 @@ export default function Grading() {
     setRunning(true);
     setError('');
 
-    while (runningRef.current) {
-      let payload;
-      try {
-        const response = await fetch('/api/grade-writing', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({}),
-        });
+    const current = await refresh();
+    const queue = (current?.next || []).map(entry => entry.rowNumber);
+    if (queue.length === 0) {
+      addLog({ kind: 'done', text: 'Nothing to grade.' });
+      stop();
+      return;
+    }
 
-        if (response.status === 401) {
-          sessionStorage.removeItem('adminData');
-          router.push('/login');
+    let needsReview = 0;
+
+    // Walk the queue explicitly so a submission we cannot grade is stepped
+    // over rather than being handed back as "next" on every iteration.
+    for (let index = 0; index < queue.length; index++) {
+      if (!runningRef.current) break;
+      const rowNumber = queue[index];
+      let retriedAfterRateLimit = false;
+
+      while (runningRef.current) {
+        let payload;
+        let httpStatus;
+        try {
+          const response = await fetch('/api/grade-writing', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ rowNumber }),
+          });
+
+          if (response.status === 401) {
+            sessionStorage.removeItem('adminData');
+            router.push('/login');
+            return;
+          }
+
+          httpStatus = response.status;
+          payload = await response.json().catch(() => ({}));
+        } catch (err) {
+          addLog({ kind: 'error', text: err.message });
+          setError(err.message);
+          stop();
           return;
         }
 
-        payload = await response.json().catch(() => ({}));
-
-        if (response.status === 429) {
+        if (httpStatus === 429) {
           const wait = payload.retryAfter || delay * 2;
           addLog({ kind: 'warn', text: `Rate limited — waiting ${wait}s` });
           await sleep(wait * 1000);
-          continue;
+          retriedAfterRateLimit = true;
+          continue; // same row again
         }
 
-        if (!response.ok) {
-          // 422s are per-submission problems (empty script, unreadable mark).
-          // Log and move on rather than stopping the whole run.
-          if (response.status === 422) {
-            addLog({ kind: 'warn', text: payload.message || 'Submission needs manual review' });
-            // Nothing was written, so this row stays pending; stop to avoid
-            // looping on it forever.
-            addLog({ kind: 'warn', text: 'Stopped: this row would repeat. Grade it by hand, then resume.' });
-            stop();
-            break;
-          }
-          throw new Error(payload.message || `Request failed (${response.status})`);
+        // Per-submission problems: empty script, or no readable mark. The row
+        // stays ungraded on purpose — we never guess a score — so note it and
+        // carry on with the rest.
+        if (httpStatus === 422) {
+          needsReview++;
+          addLog({ kind: 'warn', text: payload.message || 'Needs manual review' });
+          break;
         }
-      } catch (err) {
-        addLog({ kind: 'error', text: err.message });
-        setError(err.message);
-        stop();
+
+        if (httpStatus >= 400) {
+          addLog({ kind: 'error', text: payload.message || `Request failed (${httpStatus})` });
+          setError(payload.message || `Request failed (${httpStatus})`);
+          stop();
+          return;
+        }
+
+        if (payload.skipped) {
+          addLog({ kind: 'warn', text: payload.message });
+        } else if (payload.graded) {
+          addLog({
+            kind: 'ok',
+            text: `${payload.graded.student_id} — ${payload.graded.score}/50 (${payload.graded.wordCount} words)`,
+          });
+        }
+
+        setStatus(prev => (prev
+          ? { ...prev, pending: Math.max(0, prev.pending - 1), graded: prev.graded + 1 }
+          : prev));
         break;
       }
 
-      if (payload.done) {
-        addLog({ kind: 'done', text: 'All writing submissions are graded.' });
-        stop();
-        await refresh();
-        break;
+      if (runningRef.current && index < queue.length - 1) {
+        await sleep(delay * 1000);
       }
-
-      if (payload.skipped) {
-        addLog({ kind: 'warn', text: payload.message });
-      } else if (payload.graded) {
-        addLog({
-          kind: 'ok',
-          text: `${payload.graded.student_id} — ${payload.graded.score}/50 (${payload.graded.wordCount} words)`,
-        });
-      }
-
-      setStatus(prev => (prev ? { ...prev, pending: payload.remaining, graded: prev.total - payload.remaining } : prev));
-
-      if (payload.remaining === 0) {
-        addLog({ kind: 'done', text: 'All writing submissions are graded.' });
-        stop();
-        await refresh();
-        break;
-      }
-
-      await sleep(delay * 1000);
+      void retriedAfterRateLimit;
     }
+
+    addLog({
+      kind: 'done',
+      text: needsReview > 0
+        ? `Run finished. ${needsReview} submission(s) need manual review.`
+        : 'Run finished. All submissions graded.',
+    });
+    stop();
+    await refresh();
   };
 
   const pending = status?.pending ?? 0;

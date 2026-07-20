@@ -33,7 +33,9 @@ async function handler(req, res) {
       total: all.length,
       graded: all.length - pending.length,
       pending: pending.length,
-      next: pending.slice(0, 25).map(entry => ({
+      // Full queue, so the client can walk it explicitly and step over a row
+      // it could not grade instead of asking for "the next one" forever.
+      next: pending.map(entry => ({
         rowNumber: entry.rowNumber,
         test_id: entry.test_id,
         student_id: entry.student_id,
