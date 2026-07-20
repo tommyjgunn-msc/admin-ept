@@ -348,6 +348,90 @@ export async function cancelTestDate(id, updatedBy) {
  * date disappearing from booking because nobody wrote the test yet would be a
  * worse failure than the warning.
  */
+/* ------------------------------------------------------------------ *
+ * Writing-test grading.
+ *
+ * Submissions columns, as written by ept-portal:
+ *   A test_id | B student_id | C score | D completed | E responses(JSON)
+ *   F timestamp | G type | H total_points | I percentage
+ *   J proctoring_flag | K proctoring_data
+ *
+ * Grades go back into C (score) exactly as the old Apps Script grader did.
+ * L and M are added by this app for the model's written feedback and an
+ * audit trail; they sit past everything ept-portal writes, so nothing
+ * collides.
+ * ------------------------------------------------------------------ */
+
+const SUBMISSIONS_RANGE = 'Submissions!A2:M';
+
+export async function getWritingSubmissions() {
+  const sheets = await getGoogleSheets();
+  const response = await sheets.spreadsheets.values.get({
+    spreadsheetId: process.env.GOOGLE_SHEET_ID,
+    range: SUBMISSIONS_RANGE,
+  });
+
+  return (response.data.values || [])
+    .map((row, index) => ({
+      rowNumber: index + 2, // sheet is 1-based and row 1 is the header
+      test_id: String(row[0] || ''),
+      student_id: String(row[1] || ''),
+      score: row[2] === undefined ? '' : String(row[2]).trim(),
+      completed: String(row[3] || ''),
+      responses: row[4] || '',
+      submitted_at: row[5] || '',
+      feedback: row[11] || '',
+    }))
+    .filter(entry => entry.test_id.startsWith('writing_'));
+}
+
+export async function getUngradedWritingSubmissions() {
+  const all = await getWritingSubmissions();
+  return all.filter(entry => entry.score === '');
+}
+
+/**
+ * Write a grade back. Re-reads the score cell first so a submission that was
+ * graded in the meantime (a second admin, a double-click) is not overwritten.
+ */
+export async function saveWritingGrade(rowNumber, { score, feedback, model }) {
+  const sheets = await getGoogleSheets();
+
+  const current = await sheets.spreadsheets.values.get({
+    spreadsheetId: process.env.GOOGLE_SHEET_ID,
+    range: `Submissions!C${rowNumber}:D${rowNumber}`,
+  });
+
+  const [existingScore, existingCompleted] = current.data.values?.[0] || [];
+  if (existingScore !== undefined && String(existingScore).trim() !== '') {
+    const error = new Error('This submission already has a score');
+    error.code = 'already_graded';
+    throw error;
+  }
+
+  await sheets.spreadsheets.values.update({
+    spreadsheetId: process.env.GOOGLE_SHEET_ID,
+    range: `Submissions!C${rowNumber}:D${rowNumber}`,
+    valueInputOption: 'RAW',
+    requestBody: {
+      // ept-portal already writes completed='true'; preserve whatever is there
+      // rather than clobbering it.
+      values: [[String(score), existingCompleted || 'true']],
+    },
+  });
+
+  await sheets.spreadsheets.values.update({
+    spreadsheetId: process.env.GOOGLE_SHEET_ID,
+    range: `Submissions!L${rowNumber}:M${rowNumber}`,
+    valueInputOption: 'RAW',
+    requestBody: {
+      values: [[String(feedback || '').slice(0, 45000), `${model} @ ${new Date().toISOString()}`]],
+    },
+  });
+
+  return true;
+}
+
 export async function getAuthoredTestTypesByDate() {
   const sheets = await getGoogleSheets();
   const response = await sheets.spreadsheets.values.get({
