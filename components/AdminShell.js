@@ -20,6 +20,28 @@ export default function AdminShell({ children }) {
           <FuturimiWordmark size={15} ink="#F3F0EA" diamond="#E0273F" />
           <span className="font-inter text-[13px] text-ftm-dim">Admin</span>
         </Link>
+        <nav className="flex items-center gap-4 ml-6 mr-auto">
+          <Link
+            href="/admin/tests"
+            className={`font-inter text-xs transition-colors ${
+              router.pathname.startsWith('/admin/tests') || router.pathname.startsWith('/admin/edit-test')
+                ? 'text-ftm-ink'
+                : 'text-ftm-dim hover:text-ftm-slate'
+            }`}
+          >
+            Tests
+          </Link>
+          <Link
+            href="/admin/test-dates"
+            className={`font-inter text-xs transition-colors ${
+              router.pathname === '/admin/test-dates'
+                ? 'text-ftm-ink'
+                : 'text-ftm-dim hover:text-ftm-slate'
+            }`}
+          >
+            Test dates
+          </Link>
+        </nav>
         <div className="flex items-center gap-4">
           <button
             onClick={handleSignOut}

@@ -1,7 +1,8 @@
 // pages/api/tests.js
 import { getGoogleSheets } from '../../utils/googleSheets';
+import { withAdminAuth } from '../../utils/withAdminAuth';
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   if (req.method === 'GET') {
     try {
       const sheets = await getGoogleSheets();
@@ -29,3 +30,5 @@ export default async function handler(req, res) {
     res.status(405).json({ message: 'Method not allowed' });
   }
 }
+
+export default withAdminAuth(handler);

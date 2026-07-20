@@ -1,5 +1,6 @@
 // pages/api/tests/[testId].js
 import { getGoogleSheets } from '../../../utils/googleSheets';
+import { withAdminAuth } from '../../../utils/withAdminAuth';
 
 // Helper functions
 async function updateWritingPrompts(sheets, testId, prompts) {
@@ -80,7 +81,7 @@ async function updateQuestions(sheets, testId, sections) {
   }
 }
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   const { testId } = req.query;
 
   if (!testId) {
@@ -368,3 +369,5 @@ export default async function handler(req, res) {
     });
   }
 }
+
+export default withAdminAuth(handler);

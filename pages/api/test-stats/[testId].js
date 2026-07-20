@@ -1,7 +1,8 @@
 // pages/api/test-stats/[testId].js
 import { getGoogleSheets } from '../../../utils/googleSheets';
+import { withAdminAuth } from '../../../utils/withAdminAuth';
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   const { testId } = req.query;
 
   // Validate testId is present
@@ -41,7 +42,10 @@ export default async function handler(req, res) {
     try {
       const submissionsResponse = await sheets.spreadsheets.values.get({
         spreadsheetId: process.env.GOOGLE_SHEET_ID,
-        range: 'Submissions!A2:F', // test_id, student_id, score, completed, responses, timestamp
+        // A..K: test_id, student_id, score, completed, responses, timestamp,
+        // type, total_points, percentage, proctoring_flag, proctoring_data.
+        // ept-portal writes all 11; reading only A..F hid scoring/proctoring.
+        range: 'Submissions!A2:K',
       });
 
       const submissions = (submissionsResponse.data.values || [])
@@ -162,3 +166,5 @@ export default async function handler(req, res) {
     });
   }
 }
+
+export default withAdminAuth(handler);

@@ -23,6 +23,14 @@ export default function Tests() {
   const fetchTests = async () => {
     try {
       const response = await fetch('/api/tests');
+      // The API now requires a signed session cookie. A stale client-side
+      // login (sessionStorage without a cookie) lands here — send them to
+      // sign in again rather than showing a generic fetch failure.
+      if (response.status === 401) {
+        sessionStorage.removeItem('adminData');
+        router.push('/login');
+        return;
+      }
       if (!response.ok) throw new Error('Failed to fetch tests');
       const data = await response.json();
 

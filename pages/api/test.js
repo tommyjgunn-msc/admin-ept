@@ -2,8 +2,9 @@
 import { getGoogleSheets } from '../../utils/googleSheets';
 import { validateTestPoints } from '../../utils/pointsValidation';
 import { validateTestScheduling, checkScheduleConflicts } from '../../utils/scheduleValidation';
+import { withAdminAuth } from '../../utils/withAdminAuth';
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ 
       error: 'method_not_allowed',
@@ -202,3 +203,5 @@ export default async function handler(req, res) {
     });
   }
 }
+
+export default withAdminAuth(handler);

@@ -1,5 +1,22 @@
 // utils/googleSheets.js
 import { google } from 'googleapis';
+import { timingSafeEqual } from 'crypto';
+
+// Constant-time string compare, used for the admin password check so the
+// comparison itself does not leak length/prefix information via timing.
+//
+// Note this is NOT the same as hashing. Hashing stored credentials only helps
+// if the store leaks; since the AdminAuth sheet is deliberately kept plaintext
+// with access restricted at the Drive level, hashing at compare time would add
+// nothing (you would be hashing the input and comparing it to a plaintext
+// cell, which simply never matches). This is the part of "handling" that can
+// actually be improved without changing what is stored.
+function safeEqual(a, b) {
+  const bufA = Buffer.from(String(a ?? ''), 'utf8');
+  const bufB = Buffer.from(String(b ?? ''), 'utf8');
+  if (bufA.length !== bufB.length) return false;
+  return timingSafeEqual(bufA, bufB);
+}
 
 export async function getGoogleSheets() {
   try {
@@ -41,7 +58,7 @@ export async function verifyAdminCredentials(username, password) {
     });
 
     const rows = response.data.values || [];
-    const admin = rows.find(row => row[0] === username && row[1] === password);
+    const admin = rows.find(row => row[0] === username && safeEqual(row[1], password));
 
     if (!admin) {
       console.log('No admin found with provided credentials');
@@ -100,7 +117,11 @@ async function updateTestStats(test_id) {
     // Get all submissions for this test
     const response = await sheets.spreadsheets.values.get({
       spreadsheetId: process.env.GOOGLE_SHEET_ID,
-      range: 'Submissions!A2:F',
+      // A..K — ept-portal writes 11 columns (type, total_points, percentage,
+      // proctoring_flag, proctoring_data live in G..K). Reading only A..F meant
+      // the admin side could not see scores, percentages or proctoring at all.
+      // Columns A..F are identical in both writers, so widening is additive.
+      range: 'Submissions!A2:K',
     });
 
     const submissions = (response.data.values || [])
@@ -130,4 +151,217 @@ async function updateTestStats(test_id) {
   } catch (error) {
     console.error('Error updating test stats:', error);
   }
+}
+
+/* ------------------------------------------------------------------ *
+ * TestDates — admin-managed bookable dates.
+ *
+ * This tab is the source of truth for the dates students can book in
+ * ept-portal (which previously read a hardcoded testDatesConfig.js).
+ *
+ * Columns: A id | B date_iso (YYYY-MM-DD) | C venues | D cap_with_laptop
+ *          E cap_without_laptop | F status | G updated_by | H updated_at
+ *
+ * date_iso is the machine truth. The 'Friday, 21 August' display string that
+ * bookings are keyed on is DERIVED from it in ept-portal — never typed by
+ * hand — which is what removes the yearless-date and wrong-weekday problems.
+ * ------------------------------------------------------------------ */
+
+const TEST_DATES_RANGE = 'TestDates!A2:H';
+
+export function testDateId(dateIso) {
+  return `td_${String(dateIso).replace(/-/g, '')}`;
+}
+
+function rowToTestDate(row, index) {
+  return {
+    id: row[0] || '',
+    date_iso: String(row[1] || '').replace(/^'|'$/g, '').trim(),
+    venues: Number(row[2]) || 4,
+    capacity: {
+      withLaptop: Number(row[3]) || 0,
+      withoutLaptop: Number(row[4]) || 0,
+    },
+    status: String(row[5] || 'published').trim(),
+    updated_by: row[6] || '',
+    updated_at: row[7] || '',
+    // 1-based sheet row, used to target updates/deletes
+    rowNumber: index + 2,
+  };
+}
+
+/**
+ * Read every TestDates row. Returns [] if the tab does not exist yet, so
+ * callers can offer to seed it rather than erroring.
+ */
+export async function getTestDates() {
+  const sheets = await getGoogleSheets();
+  try {
+    const response = await sheets.spreadsheets.values.get({
+      spreadsheetId: process.env.GOOGLE_SHEET_ID,
+      range: TEST_DATES_RANGE,
+    });
+    return (response.data.values || [])
+      .map(rowToTestDate)
+      .filter(entry => entry.date_iso)
+      .sort((a, b) => a.date_iso.localeCompare(b.date_iso));
+  } catch (error) {
+    if (String(error.message || '').includes('Unable to parse range')) {
+      return [];
+    }
+    throw error;
+  }
+}
+
+/** Create the TestDates tab with its header row. Safe to call repeatedly. */
+export async function ensureTestDatesSheet() {
+  const sheets = await getGoogleSheets();
+  const meta = await sheets.spreadsheets.get({
+    spreadsheetId: process.env.GOOGLE_SHEET_ID,
+  });
+
+  const exists = (meta.data.sheets || []).some(
+    sheet => sheet.properties?.title === 'TestDates'
+  );
+  if (exists) return false;
+
+  await sheets.spreadsheets.batchUpdate({
+    spreadsheetId: process.env.GOOGLE_SHEET_ID,
+    requestBody: {
+      requests: [{ addSheet: { properties: { title: 'TestDates' } } }],
+    },
+  });
+
+  await sheets.spreadsheets.values.update({
+    spreadsheetId: process.env.GOOGLE_SHEET_ID,
+    range: 'TestDates!A1:H1',
+    valueInputOption: 'RAW',
+    requestBody: {
+      values: [[
+        'id', 'date_iso', 'venues', 'cap_with_laptop',
+        'cap_without_laptop', 'status', 'updated_by', 'updated_at',
+      ]],
+    },
+  });
+
+  return true;
+}
+
+function toRow(entry, updatedBy) {
+  return [
+    entry.id || testDateId(entry.date_iso),
+    entry.date_iso,
+    String(entry.venues ?? 4),
+    String(entry.capacity?.withLaptop ?? 0),
+    String(entry.capacity?.withoutLaptop ?? 0),
+    entry.status || 'published',
+    updatedBy || '',
+    new Date().toISOString(),
+  ];
+}
+
+export async function createTestDate(entry, updatedBy) {
+  await ensureTestDatesSheet();
+  const existing = await getTestDates();
+  if (existing.some(row => row.date_iso === entry.date_iso)) {
+    const error = new Error('A test date already exists for that day');
+    error.code = 'duplicate_date';
+    throw error;
+  }
+
+  const sheets = await getGoogleSheets();
+  await sheets.spreadsheets.values.append({
+    spreadsheetId: process.env.GOOGLE_SHEET_ID,
+    range: TEST_DATES_RANGE,
+    valueInputOption: 'RAW',
+    insertDataOption: 'INSERT_ROWS',
+    requestBody: { values: [toRow(entry, updatedBy)] },
+  });
+
+  return toRow(entry, updatedBy);
+}
+
+export async function updateTestDate(id, entry, updatedBy) {
+  const existing = await getTestDates();
+  const target = existing.find(row => row.id === id);
+  if (!target) {
+    const error = new Error('Test date not found');
+    error.code = 'not_found';
+    throw error;
+  }
+
+  // Moving a date onto a day that already has an entry would create two
+  // competing rows for the same day.
+  if (
+    entry.date_iso !== target.date_iso &&
+    existing.some(row => row.date_iso === entry.date_iso)
+  ) {
+    const error = new Error('A test date already exists for that day');
+    error.code = 'duplicate_date';
+    throw error;
+  }
+
+  const sheets = await getGoogleSheets();
+  await sheets.spreadsheets.values.update({
+    spreadsheetId: process.env.GOOGLE_SHEET_ID,
+    range: `TestDates!A${target.rowNumber}:H${target.rowNumber}`,
+    valueInputOption: 'RAW',
+    requestBody: { values: [toRow({ ...entry, id }, updatedBy)] },
+  });
+
+  return { ...entry, id };
+}
+
+/**
+ * Soft-delete: mark the row cancelled rather than removing it, so any bookings
+ * already made against that day keep resolving to a real record.
+ */
+export async function cancelTestDate(id, updatedBy) {
+  const existing = await getTestDates();
+  const target = existing.find(row => row.id === id);
+  if (!target) {
+    const error = new Error('Test date not found');
+    error.code = 'not_found';
+    throw error;
+  }
+
+  const sheets = await getGoogleSheets();
+  await sheets.spreadsheets.values.update({
+    spreadsheetId: process.env.GOOGLE_SHEET_ID,
+    range: `TestDates!F${target.rowNumber}:H${target.rowNumber}`,
+    valueInputOption: 'RAW',
+    requestBody: {
+      values: [['cancelled', updatedBy || '', new Date().toISOString()]],
+    },
+  });
+
+  return true;
+}
+
+/**
+ * Which test types already exist for each date, derived from the Tests tab.
+ * test_id is `${type}_${YYYYMMDD}` (see admin-ept pages/api/test.js), so the
+ * authored types for a day can be read straight off the ids.
+ *
+ * This is advisory only — it drives a "no test authored yet" warning in the
+ * admin UI. It deliberately does NOT gate what students can book, because a
+ * date disappearing from booking because nobody wrote the test yet would be a
+ * worse failure than the warning.
+ */
+export async function getAuthoredTestTypesByDate() {
+  const sheets = await getGoogleSheets();
+  const response = await sheets.spreadsheets.values.get({
+    spreadsheetId: process.env.GOOGLE_SHEET_ID,
+    range: 'Tests!A2:G',
+  });
+
+  return (response.data.values || []).reduce((acc, row) => {
+    const match = String(row[0] || '').match(/^(reading|writing|listening)_(\d{4})(\d{2})(\d{2})$/);
+    if (!match) return acc;
+    const [, type, year, month, day] = match;
+    const iso = `${year}-${month}-${day}`;
+    if (!acc[iso]) acc[iso] = [];
+    if (!acc[iso].includes(type)) acc[iso].push(type);
+    return acc;
+  }, {});
 }

@@ -1,5 +1,6 @@
 // pages/api/auth.js
 import { verifyAdminCredentials } from '../../utils/googleSheets';
+import { createAdminSession, setAdminSessionCookie } from '../../utils/adminSession';
 
 export default async function handler(req, res) {
   // Method validation
@@ -46,7 +47,10 @@ export default async function handler(req, res) {
       });
     }
 
-    // Successful authentication
+    // Successful authentication — issue a signed session cookie so the API
+    // routes can actually verify this admin on subsequent requests. The JSON
+    // body is unchanged so the existing login page keeps working as-is.
+    setAdminSessionCookie(res, createAdminSession(admin));
     return res.status(200).json(admin);
 
   } catch (error) {
