@@ -1,4 +1,5 @@
-// utils/cerebras.js — Cerebras inference client for writing-test grading.
+// utils/cerebras.js — Cerebras inference client for writing-test grading and
+// writing-prompt generation.
 //
 // Replaces the Apps Script grader that lived on the sheet and called
 // OpenRouter with a hardcoded key. The key now lives in the CEREBRAS_API
@@ -39,21 +40,15 @@ export function hasApiKey() {
 }
 
 /**
- * Send one submission to Cerebras for grading.
- * Returns the raw assistant text; score extraction is a separate concern.
+ * One chat-completion round trip. Shared by grading and prompt generation so
+ * error handling (timeouts, rate limits, empty responses) lives in one place.
+ * Returns the assistant's text.
  */
-export async function gradeSubmission(essay, { timeoutMs = 60000 } = {}) {
+export async function chatCompletion(messages, { timeoutMs = 60000, temperature = 0.2 } = {}) {
   const apiKey = process.env.CEREBRAS_API || process.env.CEREBRAS_API_KEY;
   if (!apiKey) {
     const error = new Error('CEREBRAS_API is not set');
     error.code = 'missing_api_key';
-    throw error;
-  }
-
-  const text = String(essay || '').slice(0, MAX_ESSAY_CHARS);
-  if (!text.trim()) {
-    const error = new Error('Submission is empty');
-    error.code = 'empty_submission';
     throw error;
   }
 
@@ -70,11 +65,8 @@ export async function gradeSubmission(essay, { timeoutMs = 60000 } = {}) {
       },
       body: JSON.stringify({
         model: getModel(),
-        messages: [
-          { role: 'system', content: SYSTEM_PROMPT },
-          { role: 'user', content: text },
-        ],
-        temperature: 0.2, // grading should be as repeatable as we can make it
+        messages,
+        temperature,
       }),
       signal: controller.signal,
     });
@@ -115,6 +107,108 @@ export async function gradeSubmission(essay, { timeoutMs = 60000 } = {}) {
 }
 
 /**
+ * Send one submission to Cerebras for grading.
+ * Returns the raw assistant text; score extraction is a separate concern.
+ */
+export async function gradeSubmission(essay, { timeoutMs = 60000 } = {}) {
+  const text = String(essay || '').slice(0, MAX_ESSAY_CHARS);
+  if (!text.trim()) {
+    const error = new Error('Submission is empty');
+    error.code = 'empty_submission';
+    throw error;
+  }
+
+  return chatCompletion(
+    [
+      { role: 'system', content: SYSTEM_PROMPT },
+      { role: 'user', content: text },
+    ],
+    // grading should be as repeatable as we can make it
+    { timeoutMs, temperature: 0.2 }
+  );
+}
+
+/* ------------------------------------------------------------------ *
+ * Writing-prompt generation.
+ *
+ * The writing test always offers three prompts — one persuasive, one
+ * argumentative, one reflective — and the student picks one and writes at
+ * least 500 words. Generation follows the established house style:
+ * a concrete task, a "Consider …" clause naming angles to weigh, and an
+ * explicit 500-word instruction.
+ * ------------------------------------------------------------------ */
+
+export const PROMPT_TYPES = ['persuasive', 'argumentative', 'reflective'];
+
+const GENERATION_SYSTEM_PROMPT =
+  'You write prompts for an English proficiency writing test taken mostly by ' +
+  'ESL university applicants. Produce exactly three essay prompts: one ' +
+  'persuasive, one argumentative, one reflective. House style, matching these ' +
+  'examples: "Write a persuasive essay arguing for or against requiring all ' +
+  'new residential buildings to install solar panels. Consider installation ' +
+  'costs, long-term energy savings, and environmental impact. Write at least ' +
+  '500 words." — a concrete, culturally neutral topic a young adult anywhere ' +
+  'can engage with; a Consider-sentence naming two or three angles; and a ' +
+  'closing instruction to write at least 500 words in that essay mode. ' +
+  'Reflective prompts ask about personal experience rather than public issues. ' +
+  'Avoid topics needing specialist or country-specific knowledge. ' +
+  'Respond with ONLY this JSON, no markdown fences, no commentary: ' +
+  '{"prompts":[{"type":"persuasive","text":"..."},{"type":"argumentative",' +
+  '"text":"..."},{"type":"reflective","text":"..."}]}';
+
+/**
+ * Generate the three writing prompts, optionally steered by a theme.
+ * Returns [{ type, text, wordLimit: 500 }] in persuasive/argumentative/
+ * reflective order, shaped exactly like the create-test editor's state.
+ */
+export async function generateWritingPrompts(theme, { timeoutMs = 60000 } = {}) {
+  const hint = String(theme || '').trim().slice(0, 300);
+  const userMessage = hint
+    ? `Generate the three prompts. Theme or topic area to draw on: ${hint}`
+    : 'Generate the three prompts. Choose fresh, varied topic areas.';
+
+  const raw = await chatCompletion(
+    [
+      { role: 'system', content: GENERATION_SYSTEM_PROMPT },
+      { role: 'user', content: userMessage },
+    ],
+    // variety is the point here, unlike grading
+    { timeoutMs, temperature: 0.8 }
+  );
+
+  // Models fence or preface JSON despite instructions; dig the object out.
+  let parsed;
+  try {
+    const stripped = raw.replace(/```(?:json)?/gi, '').trim();
+    const start = stripped.indexOf('{');
+    const end = stripped.lastIndexOf('}');
+    parsed = JSON.parse(start >= 0 && end > start ? stripped.slice(start, end + 1) : stripped);
+  } catch {
+    const error = new Error('The model did not return usable JSON — try again');
+    error.code = 'bad_generation';
+    error.detail = raw.slice(0, 300);
+    throw error;
+  }
+
+  const prompts = Array.isArray(parsed?.prompts) ? parsed.prompts : [];
+  const byType = new Map(
+    prompts
+      .filter(p => p && typeof p.text === 'string')
+      .map(p => [String(p.type || '').toLowerCase().trim(), p.text.trim()])
+  );
+
+  const missing = PROMPT_TYPES.filter(type => !byType.get(type) || byType.get(type).length < 40);
+  if (missing.length > 0) {
+    const error = new Error(`The model's response was missing a usable ${missing.join(' and ')} prompt — try again`);
+    error.code = 'bad_generation';
+    throw error;
+  }
+
+  // wordLimit 500 matches the editor's default for hand-written prompts.
+  return PROMPT_TYPES.map(type => ({ type, text: byType.get(type), wordLimit: 500 }));
+}
+
+/**
  * Pull a mark out of 50 from the model's prose.
  * Patterns carried over from the Apps Script grader this replaces.
  * Returns null when nothing trustworthy is found, so the caller can flag the
@@ -144,10 +238,6 @@ export function extractScore(text) {
   return null;
 }
 
-/**
- * Extract the essay text from the JSON blob stored in Submissions column E.
- * ept-portal stores writing responses as an object keyed by prompt id.
- */
 export function extractEssay(rawResponses) {
   if (!rawResponses) return '';
 

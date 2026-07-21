@@ -423,7 +423,36 @@ const WritingTestForm = ({ onSubmit, isLoading }) => {
   const [prompts, setPrompts] = useState([
       { type: 'argumentative', text: '', wordLimit: 500 }
     ]);
-  
+
+  // AI drafting — fills the three prompts (persuasive, argumentative,
+  // reflective) for review and editing; nothing is saved until Create Test.
+  const [aiTheme, setAiTheme] = useState('');
+  const [aiBusy, setAiBusy] = useState(false);
+  const [aiError, setAiError] = useState('');
+
+  const generateWithAI = async () => {
+    if (prompts.some(p => p.text.trim()) &&
+        !window.confirm('Replace the prompts you have typed with AI drafts?')) {
+      return;
+    }
+    setAiBusy(true);
+    setAiError('');
+    try {
+      const response = await fetch('/api/generate-prompts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ theme: aiTheme }),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.message || 'Generation failed');
+      setPrompts(data.prompts);
+    } catch (err) {
+      setAiError(err.message);
+    } finally {
+      setAiBusy(false);
+    }
+  };
+
     const handleSubmit = (e) => {
       e.preventDefault();
       onSubmit({
@@ -473,6 +502,34 @@ const WritingTestForm = ({ onSubmit, isLoading }) => {
           </div>
         </div>
   
+        {/* AI drafting */}
+        <div className="bg-ftm-card shadow rounded-lg p-6 space-y-3">
+          <div className="flex items-center justify-between">
+            <h3 className="text-lg font-medium">Generate prompts with AI</h3>
+            <span className="text-xs text-ftm-dim">drafts all three types — edit before saving</span>
+          </div>
+          <div className="flex gap-3 items-start">
+            <input
+              type="text"
+              value={aiTheme}
+              onChange={(e) => setAiTheme(e.target.value)}
+              placeholder="Optional theme, e.g. technology and daily life (leave blank for varied topics)"
+              className="flex-1 border border-white/[.16] rounded-md shadow-sm p-2 text-sm"
+            />
+            <button
+              type="button"
+              onClick={generateWithAI}
+              disabled={aiBusy}
+              className={`px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-ftm-red hover:bg-[#C51F35] whitespace-nowrap ${
+                aiBusy ? 'opacity-50 cursor-not-allowed' : ''
+              }`}
+            >
+              {aiBusy ? 'Generating…' : 'Generate prompts'}
+            </button>
+          </div>
+          {aiError && <p className="text-sm text-ftm-red">{aiError}</p>}
+        </div>
+
         {/* Writing Prompts Section */}
         {prompts.map((prompt, index) => (
           <div key={index} className="bg-ftm-card shadow rounded-lg p-6 space-y-4">
