@@ -7,6 +7,7 @@
 // admin UI can visualise one sitting. Older sittings stay in the sheet.
 import { getGoogleSheets } from '../../utils/googleSheets';
 import { withAdminAuth } from '../../utils/withAdminAuth';
+import { RANGES } from '../../utils/sheetSchema';
 
 // Mirrors the flag rule in ept-portal/pages/api/submit-test.js so the report
 // can say WHY a row was flagged, not just that it was.
@@ -50,6 +51,38 @@ function blurAnalysis(focusEvents) {
   };
 }
 
+// Words-per-minute peaks from the writing section's word-count growth curve
+// ({t, w} samples taken at most every 15s). ESL exam typing sits around
+// 15–40 wpm; a sustained triple-digit burst is the signature of dictation or
+// externally drafted text arriving at once.
+function typingAnalysis(typingSamples) {
+  const samples = (Array.isArray(typingSamples) ? typingSamples : [])
+    .map(s => ({ t: Date.parse(s.t), w: Number(s.w) }))
+    .filter(s => !Number.isNaN(s.t) && Number.isFinite(s.w))
+    .sort((a, b) => a.t - b.t);
+
+  let peakWpm = 0;
+  let peakBurst = null;
+  for (let i = 1; i < samples.length; i++) {
+    const seconds = (samples[i].t - samples[i - 1].t) / 1000;
+    const words = samples[i].w - samples[i - 1].w;
+    if (seconds >= 10 && words > 0) {
+      const wpm = Math.round(words / (seconds / 60));
+      if (wpm > peakWpm) {
+        peakWpm = wpm;
+        peakBurst = { words, seconds: Math.round(seconds) };
+      }
+    }
+  }
+
+  return {
+    hasTyping: samples.length >= 2,
+    typedWords: samples.length ? samples[samples.length - 1].w : 0,
+    peakWpm,
+    peakBurst,
+  };
+}
+
 async function handler(req, res) {
   if (req.method !== 'GET') {
     return res.status(405).json({ error: 'method_not_allowed' });
@@ -58,7 +91,7 @@ async function handler(req, res) {
   const sheets = await getGoogleSheets();
   const response = await sheets.spreadsheets.values.get({
     spreadsheetId: process.env.GOOGLE_SHEET_ID,
-    range: 'Submissions!A2:K',
+    range: RANGES.SUBMISSIONS_PORTAL,
   });
 
   const rows = response.data.values || [];
@@ -106,6 +139,7 @@ async function handler(req, res) {
         forcedSubmit: Boolean(proctoring?.shouldForceSubmit),
         reasons,
         ...blurAnalysis(proctoring?.focusEvents),
+        ...typingAnalysis(proctoring?.typingSamples),
       };
     })
     // Flagged first, then by most warnings, so trouble sorts to the top.

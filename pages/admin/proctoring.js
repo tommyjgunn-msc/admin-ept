@@ -205,6 +205,14 @@ export default function ProctoringReport() {
                             {sub.longestAwaySeconds > 0 && ` (longest ${formatSeconds(sub.longestAwaySeconds)})`}
                           </span>
                         )}
+                        {sub.hasTyping && (
+                          <span className={chip(sub.peakWpm >= 150 ? 'red' : sub.peakWpm >= 90 ? 'amber' : '')}>
+                            {sub.typedWords} words typed
+                            {sub.peakWpm > 0 && `, peak ${sub.peakWpm} wpm`}
+                            {sub.peakBurst && sub.peakWpm >= 90 &&
+                              ` (${sub.peakBurst.words} words in ${sub.peakBurst.seconds}s)`}
+                          </span>
+                        )}
                       </div>
                     ))}
                   </div>
@@ -216,6 +224,8 @@ export default function ProctoringReport() {
               The multi-monitor signal is a screen-size heuristic and can misfire on large
               single monitors or non-maximised windows — treat it as a prompt to ask, not proof.
               A single copy/paste attempt flags a submission; tab switches flag from the second one.
+              Typing pace: ESL exam typing usually sits around 15–40 wpm — a sustained
+              triple-digit peak suggests dictation or externally drafted text, not proof of it.
             </p>
           </>
         )}
