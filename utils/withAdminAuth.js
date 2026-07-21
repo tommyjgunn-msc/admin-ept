@@ -5,20 +5,23 @@
 // screen was a client-side gate only.
 import { getAdminSession, getAdminSessionToken } from './adminSession';
 
-// Values in the AdminAuth "permissions" column (C) that mean "may look, not touch".
-const READ_ONLY_PERMISSIONS = ['read', 'readonly', 'read-only', 'viewer', 'view'];
+// AdminAuth "permissions" column (C) values that may perform write actions.
+// The live sheet uses exactly three values: admin, editor (both write) and
+// viewer (read-only).
+const WRITE_PERMISSIONS = ['admin', 'editor'];
 
 /**
  * Whether an admin may perform write actions.
  *
- * Deliberately fail-open: the vocabulary actually used in the live AdminAuth
- * sheet is not known to this code, so an unrecognised or blank value grants
- * write access. Locking real admins out of their own portal is a worse failure
- * than being mildly permissive. Tighten this once the sheet's values are known.
+ * Fail-closed allowlist: only recognised write roles pass. A blank or typo'd
+ * permissions cell therefore denies writes rather than granting them, so a row
+ * added without a proper role cannot create or delete tests. The trade is that
+ * a mistyped role locks that person out of editing until the cell is fixed —
+ * the safer of the two failures.
  */
 export function canWrite(permissions) {
   const value = String(permissions || '').trim().toLowerCase();
-  return !READ_ONLY_PERMISSIONS.includes(value);
+  return WRITE_PERMISSIONS.includes(value);
 }
 
 /**
