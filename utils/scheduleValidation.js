@@ -1,3 +1,4 @@
+import { RANGES } from './sheetSchema';
 // utils/scheduleValidation.js
 export function validateTestScheduling(test) {
     // Parse 'YYYY-MM-DD' as a LOCAL date. Using new Date('YYYY-MM-DD') parses as
@@ -24,7 +25,7 @@ export function validateTestScheduling(test) {
     // Check for existing tests on the same date
     const testsResponse = await sheets.spreadsheets.values.get({
       spreadsheetId: process.env.GOOGLE_SHEET_ID,
-      range: 'Tests!A2:G',
+      range: RANGES.TESTS,
     });
   
     const existingTests = testsResponse.data.values

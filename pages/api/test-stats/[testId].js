@@ -1,6 +1,7 @@
 // pages/api/test-stats/[testId].js
 import { getGoogleSheets } from '../../../utils/googleSheets';
 import { withAdminAuth } from '../../../utils/withAdminAuth';
+import { RANGES } from '../../../utils/sheetSchema';
 
 async function handler(req, res) {
   const { testId } = req.query;
@@ -26,7 +27,7 @@ async function handler(req, res) {
     // Get test details first 
     const testResponse = await sheets.spreadsheets.values.get({
       spreadsheetId: process.env.GOOGLE_SHEET_ID,
-      range: 'Tests!A2:G',
+      range: RANGES.TESTS,
     });
 
     const test = testResponse.data.values.find(row => row[0] === testId);
@@ -45,7 +46,7 @@ async function handler(req, res) {
         // A..K: test_id, student_id, score, completed, responses, timestamp,
         // type, total_points, percentage, proctoring_flag, proctoring_data.
         // ept-portal writes all 11; reading only A..F hid scoring/proctoring.
-        range: 'Submissions!A2:K',
+        range: RANGES.SUBMISSIONS_PORTAL,
       });
 
       const submissions = (submissionsResponse.data.values || [])
@@ -99,7 +100,7 @@ async function handler(req, res) {
         try {
           const questionsResponse = await sheets.spreadsheets.values.get({
             spreadsheetId: process.env.GOOGLE_SHEET_ID,
-            range: 'Questions!A2:I',
+            range: RANGES.QUESTIONS,
           });
 
           const testQuestions = questionsResponse.data.values

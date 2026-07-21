@@ -2,6 +2,7 @@
 import { getGoogleSheets } from '../../utils/googleSheets';
 import { validateTestScheduling } from '../../utils/scheduleValidation';
 import { withAdminAuth } from '../../utils/withAdminAuth';
+import { RANGES } from '../../utils/sheetSchema';
 
 async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -37,7 +38,7 @@ async function handler(req, res) {
     // Fetch the source test
     const testsResponse = await sheets.spreadsheets.values.get({
       spreadsheetId: process.env.GOOGLE_SHEET_ID,
-      range: 'Tests!A2:G',
+      range: RANGES.TESTS,
     });
 
     const sourceTest = testsResponse.data.values.find(row => row[0] === sourceTestId);
@@ -67,7 +68,7 @@ async function handler(req, res) {
     // Create new test record
     await sheets.spreadsheets.values.append({
       spreadsheetId: process.env.GOOGLE_SHEET_ID,
-      range: 'Tests!A2:G',
+      range: RANGES.TESTS,
       valueInputOption: 'RAW',
       insertDataOption: 'INSERT_ROWS',
       requestBody: {
@@ -88,7 +89,7 @@ async function handler(req, res) {
       // Get source test questions
       const questionsResponse = await sheets.spreadsheets.values.get({
         spreadsheetId: process.env.GOOGLE_SHEET_ID,
-        range: 'Questions!A2:I',
+        range: RANGES.QUESTIONS,
       });
 
       const sourceQuestions = questionsResponse.data.values
@@ -111,7 +112,7 @@ async function handler(req, res) {
         // Add questions for new test
         await sheets.spreadsheets.values.append({
           spreadsheetId: process.env.GOOGLE_SHEET_ID,
-          range: 'Questions!A2:I',
+          range: RANGES.QUESTIONS,
           valueInputOption: 'RAW',
           insertDataOption: 'INSERT_ROWS',
           requestBody: { values: newQuestions }
@@ -121,7 +122,7 @@ async function handler(req, res) {
       // Get source test prompts
       const promptsResponse = await sheets.spreadsheets.values.get({
         spreadsheetId: process.env.GOOGLE_SHEET_ID,
-        range: 'WritingPrompts!A2:E',
+        range: RANGES.WRITING_PROMPTS,
       });
 
       const sourcePrompts = promptsResponse.data.values
@@ -140,7 +141,7 @@ async function handler(req, res) {
         // Add prompts for new test
         await sheets.spreadsheets.values.append({
           spreadsheetId: process.env.GOOGLE_SHEET_ID,
-          range: 'WritingPrompts!A2:E',
+          range: RANGES.WRITING_PROMPTS,
           valueInputOption: 'RAW',
           insertDataOption: 'INSERT_ROWS',
           requestBody: { values: newPrompts }

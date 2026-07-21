@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/router';
+import WritingTestEditor from '../../components/WritingTestEditor';
 
 // Components for each test type
 const ReadingTestForm = ({ onSubmit, isLoading }) => {
@@ -530,80 +531,14 @@ const WritingTestForm = ({ onSubmit, isLoading }) => {
           {aiError && <p className="text-sm text-ftm-red">{aiError}</p>}
         </div>
 
-        {/* Writing Prompts Section */}
-        {prompts.map((prompt, index) => (
-          <div key={index} className="bg-ftm-card shadow rounded-lg p-6 space-y-4">
-            <h3 className="text-lg font-medium">Writing Prompt {index + 1}</h3>
-            
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-ftm-slate">Prompt Type</label>
-                <select
-                  value={prompt.type}
-                  onChange={(e) => {
-                    const newPrompts = [...prompts];
-                    newPrompts[index].type = e.target.value;
-                    setPrompts(newPrompts);
-                  }}
-                  className="mt-1 block w-full border border-white/[.16] rounded-md shadow-sm p-2"
-                  required
-                >
-                  <option value="argumentative">Argumentative</option>
-                  <option value="persuasive">Persuasive</option>
-                  <option value="reflective">Reflective</option>
-                </select>
-              </div>
+        {/* Writing prompts — the shared editor (edit-test uses the same one,
+            so create and edit can no longer drift apart) */}
+        <div className="bg-ftm-card shadow rounded-lg p-6">
+          <WritingTestEditor content={prompts} onChange={setPrompts} />
+        </div>
   
-              <div>
-                <label className="block text-sm font-medium text-ftm-slate">Prompt Text</label>
-                <textarea
-                  value={prompt.text}
-                  onChange={(e) => {
-                    const newPrompts = [...prompts];
-                    newPrompts[index].text = e.target.value;
-                    setPrompts(newPrompts);
-                  }}
-                  rows={4}
-                  className="mt-1 block w-full border border-white/[.16] rounded-md shadow-sm p-2"
-                  required
-                />
-              </div>
-  
-              <div>
-                <label className="block text-sm font-medium text-ftm-slate">Word Limit</label>
-                <input
-                  type="number"
-                  value={prompt.wordLimit}
-                  onChange={(e) => {
-                    const newPrompts = [...prompts];
-                    newPrompts[index].wordLimit = parseInt(e.target.value);
-                    setPrompts(newPrompts);
-                  }}
-                  min="100"
-                  className="mt-1 block w-32 border border-white/[.16] rounded-md shadow-sm p-2"
-                  required
-                />
-              </div>
-            </div>
-          </div>
-        ))}
-  
-        {/* Form buttons */}
-        <div className="flex justify-between">
-          {prompts.length < 3 && (
-            <button
-              type="button"
-              onClick={() => setPrompts([...prompts, {
-                type: 'argumentative',
-                text: '',
-                wordLimit: 500
-              }])}
-              className="px-4 py-2 border border-white/[.16] rounded-md shadow-sm text-sm font-medium text-ftm-slate hover:bg-ftm-up"
-            >
-              Add Prompt
-            </button>
-          )}
-  
+        {/* Form buttons — Add Prompt lives inside the shared editor now */}
+        <div className="flex justify-end">
           <button
             type="submit"
             disabled={isLoading}

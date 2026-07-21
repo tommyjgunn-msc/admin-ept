@@ -1,3 +1,7 @@
+// ⚠ MIRRORED FILE: an identical copy of this file lives in BOTH ept-portal
+// and admin-ept (shared branding, no shared package). If you change one copy,
+// change the other in the same sitting — they have already diverged silently
+// once before.
 // components/Futurimi.js — Futurimi brand primitives (wordmark + three.js hero)
 // Ported from the design handoff (design_handoff_futurimi_redesign): the
 // wordmark is styled text, never an image; the hero is ambient background

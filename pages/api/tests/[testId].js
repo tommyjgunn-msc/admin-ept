@@ -1,13 +1,14 @@
 // pages/api/tests/[testId].js
 import { getGoogleSheets } from '../../../utils/googleSheets';
 import { withAdminAuth } from '../../../utils/withAdminAuth';
+import { RANGES } from '../../../utils/sheetSchema';
 
 // Helper functions
 async function updateWritingPrompts(sheets, testId, prompts) {
   // First, get existing prompts
   const promptsResponse = await sheets.spreadsheets.values.get({
     spreadsheetId: process.env.GOOGLE_SHEET_ID,
-    range: 'WritingPrompts!A2:E',
+    range: RANGES.WRITING_PROMPTS,
   });
 
   // Filter out old prompts for this test and add new ones
@@ -26,13 +27,13 @@ async function updateWritingPrompts(sheets, testId, prompts) {
   // Clear and rewrite the prompts
   await sheets.spreadsheets.values.clear({
     spreadsheetId: process.env.GOOGLE_SHEET_ID,
-    range: 'WritingPrompts!A2:E',
+    range: RANGES.WRITING_PROMPTS,
   });
 
   if (updatedPrompts.length > 0) {
     await sheets.spreadsheets.values.append({
       spreadsheetId: process.env.GOOGLE_SHEET_ID,
-      range: 'WritingPrompts!A2',
+      range: RANGES.WRITING_PROMPTS,
       valueInputOption: 'RAW',
       requestBody: { values: updatedPrompts }
     });
@@ -43,7 +44,7 @@ async function updateQuestions(sheets, testId, sections) {
   // First, get existing questions
   const questionsResponse = await sheets.spreadsheets.values.get({
     spreadsheetId: process.env.GOOGLE_SHEET_ID,
-    range: 'Questions!A2:I',
+    range: RANGES.QUESTIONS,
   });
 
   // Filter out old questions for this test and add new ones
@@ -68,13 +69,13 @@ async function updateQuestions(sheets, testId, sections) {
   // Clear and rewrite the questions
   await sheets.spreadsheets.values.clear({
     spreadsheetId: process.env.GOOGLE_SHEET_ID,
-    range: 'Questions!A2:I',
+    range: RANGES.QUESTIONS,
   });
 
   if (updatedQuestions.length > 0) {
     await sheets.spreadsheets.values.append({
       spreadsheetId: process.env.GOOGLE_SHEET_ID,
-      range: 'Questions!A2',
+      range: RANGES.QUESTIONS,
       valueInputOption: 'RAW',
       requestBody: { values: updatedQuestions }
     });
@@ -99,7 +100,7 @@ async function handler(req, res) {
         try {
           const testsResponse = await sheets.spreadsheets.values.get({
             spreadsheetId: process.env.GOOGLE_SHEET_ID,
-            range: 'Tests!A2:G',
+            range: RANGES.TESTS,
           });
 
           const test = testsResponse.data.values
@@ -120,14 +121,14 @@ async function handler(req, res) {
           if (type === 'writing') {
             const promptsResponse = await sheets.spreadsheets.values.get({
               spreadsheetId: process.env.GOOGLE_SHEET_ID,
-              range: 'WritingPrompts!A2:E',
+              range: RANGES.WRITING_PROMPTS,
             });
             content = promptsResponse.data.values
               ?.filter(row => row[0] === testId) || [];
           } else if (type === 'reading' || type === 'listening') {
             const questionsResponse = await sheets.spreadsheets.values.get({
               spreadsheetId: process.env.GOOGLE_SHEET_ID,
-              range: 'Questions!A2:I',
+              range: RANGES.QUESTIONS,
             });
             content = questionsResponse.data.values
               ?.filter(row => row[0] === testId) || [];
@@ -178,7 +179,7 @@ async function handler(req, res) {
           // Update test metadata
           const testsResponse = await sheets.spreadsheets.values.get({
             spreadsheetId: process.env.GOOGLE_SHEET_ID,
-            range: 'Tests!A2:G',
+            range: RANGES.TESTS,
           });
 
           const testIndex = testsResponse.data.values.findIndex(row => row[0] === testId);
@@ -254,7 +255,7 @@ async function handler(req, res) {
           // Check if test exists
           const testsResponse = await sheets.spreadsheets.values.get({
             spreadsheetId: process.env.GOOGLE_SHEET_ID,
-            range: 'Tests!A2:G',
+            range: RANGES.TESTS,
           });
 
           const testExists = testsResponse.data.values.some(row => row[0] === testId);
@@ -270,13 +271,13 @@ async function handler(req, res) {
           const newValues = testsResponse.data.values.filter(row => row[0] !== testId);
           await sheets.spreadsheets.values.clear({
             spreadsheetId: process.env.GOOGLE_SHEET_ID,
-            range: 'Tests!A2:G',
+            range: RANGES.TESTS,
           });
 
           if (newValues.length > 0) {
             await sheets.spreadsheets.values.append({
               spreadsheetId: process.env.GOOGLE_SHEET_ID,
-              range: 'Tests!A2',
+              range: RANGES.TESTS,
               valueInputOption: 'RAW',
               requestBody: { values: newValues }
             });
@@ -287,19 +288,19 @@ async function handler(req, res) {
           if (testType === 'writing') {
             const promptsResponse = await sheets.spreadsheets.values.get({
               spreadsheetId: process.env.GOOGLE_SHEET_ID,
-              range: 'WritingPrompts!A2:E',
+              range: RANGES.WRITING_PROMPTS,
             });
             const newPrompts = promptsResponse.data.values?.filter(row => row[0] !== testId) || [];
             
             await sheets.spreadsheets.values.clear({
               spreadsheetId: process.env.GOOGLE_SHEET_ID,
-              range: 'WritingPrompts!A2:E',
+              range: RANGES.WRITING_PROMPTS,
             });
 
             if (newPrompts.length > 0) {
               await sheets.spreadsheets.values.append({
                 spreadsheetId: process.env.GOOGLE_SHEET_ID,
-                range: 'WritingPrompts!A2',
+                range: RANGES.WRITING_PROMPTS,
                 valueInputOption: 'RAW',
                 requestBody: { values: newPrompts }
               });
@@ -307,19 +308,19 @@ async function handler(req, res) {
           } else if (testType === 'reading' || testType === 'listening') {
             const questionsResponse = await sheets.spreadsheets.values.get({
               spreadsheetId: process.env.GOOGLE_SHEET_ID,
-              range: 'Questions!A2:I',
+              range: RANGES.QUESTIONS,
             });
             const newQuestions = questionsResponse.data.values?.filter(row => row[0] !== testId) || [];
             
             await sheets.spreadsheets.values.clear({
               spreadsheetId: process.env.GOOGLE_SHEET_ID,
-              range: 'Questions!A2:I',
+              range: RANGES.QUESTIONS,
             });
 
             if (newQuestions.length > 0) {
               await sheets.spreadsheets.values.append({
                 spreadsheetId: process.env.GOOGLE_SHEET_ID,
-                range: 'Questions!A2',
+                range: RANGES.QUESTIONS,
                 valueInputOption: 'RAW',
                 requestBody: { values: newQuestions }
               });

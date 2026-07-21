@@ -1,15 +1,20 @@
-// components/WritingTestEditor.js
+// components/WritingTestEditor.js — the ONE writing-prompt editor, used by
+// both create-test and edit-test (create-test used to carry its own inline
+// copy of this UI, which is exactly how the two drifted).
+//
+// Fully controlled: `content` is the prompt list, every mutation goes through
+// `onChange`. That is what lets the AI "generate prompts" flow drop drafts
+// straight into the editor.
 import { useState } from 'react';
 import PreviewModal from './PreviewModal';
 
-export default function WritingTestEditor({ content, onChange }) {
-  // content is already structured prompts (transformed once on load by the
-  // edit page). Fall back to a single default prompt when there's nothing yet.
-  const initialPrompts = (Array.isArray(content) && content.length > 0)
-    ? content
-    : [{ type: 'argumentative', text: '', wordLimit: 500 }];
+const DEFAULT_PROMPT = { type: 'argumentative', text: '', wordLimit: 500 };
 
-  const [prompts, setPrompts] = useState(initialPrompts);
+export default function WritingTestEditor({ content, onChange }) {
+  const prompts = (Array.isArray(content) && content.length > 0)
+    ? content
+    : [DEFAULT_PROMPT];
+
   const [previewPrompt, setPreviewPrompt] = useState(null);
 
   const updatePrompt = (index, field, value) => {
@@ -18,24 +23,16 @@ export default function WritingTestEditor({ content, onChange }) {
       ...newPrompts[index],
       [field]: value
     };
-    setPrompts(newPrompts);
     onChange(newPrompts);
   };
 
   const addPrompt = () => {
     if (prompts.length >= 3) return; // Maximum 3 prompts
-    const newPrompts = [
-      ...prompts,
-      { type: 'argumentative', text: '', wordLimit: 500 } // Changed default points to 50
-    ];
-    setPrompts(newPrompts);
-    onChange(newPrompts);
+    onChange([...prompts, { ...DEFAULT_PROMPT }]);
   };
 
   const removePrompt = (index) => {
-    const newPrompts = prompts.filter((_, i) => i !== index);
-    setPrompts(newPrompts);
-    onChange(newPrompts);
+    onChange(prompts.filter((_, i) => i !== index));
   };
 
   return (
@@ -104,16 +101,20 @@ export default function WritingTestEditor({ content, onChange }) {
           </div>
 
           <div>
+            {/* This field IS the word limit (WritingPrompts column E) — it was
+                labelled "Points" with max=50 for a long time, which fought the
+                default of 500 and invited someone to "fix" real word limits
+                down to 50. */}
             <label className="block text-sm font-medium text-ftm-slate">
-              Points
+              Word Limit
             </label>
             <input
               type="number"
               value={prompt.wordLimit}
               onChange={(e) => updatePrompt(index, 'wordLimit', parseInt(e.target.value))}
               className="mt-1 block w-32 border border-white/[.16] rounded-md shadow-sm p-2"
-              min="1"
-              max="50"
+              min="100"
+              max="1000"
               required
             />
           </div>
@@ -136,7 +137,7 @@ export default function WritingTestEditor({ content, onChange }) {
                 <p className="text-lg">{previewPrompt.text}</p>
               </div>
               <div className="mt-4 text-sm text-ftm-mut">
-                Points: {previewPrompt.wordLimit}
+                Word limit: {previewPrompt.wordLimit}
               </div>
             </div>
             <div className="border rounded-lg p-4">

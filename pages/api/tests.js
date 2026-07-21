@@ -1,6 +1,7 @@
 // pages/api/tests.js
 import { getGoogleSheets } from '../../utils/googleSheets';
 import { withAdminAuth } from '../../utils/withAdminAuth';
+import { RANGES } from '../../utils/sheetSchema';
 
 async function handler(req, res) {
   if (req.method === 'GET') {
@@ -8,7 +9,7 @@ async function handler(req, res) {
       const sheets = await getGoogleSheets();
       const response = await sheets.spreadsheets.values.get({
         spreadsheetId: process.env.GOOGLE_SHEET_ID,
-        range: 'Tests!A2:G',
+        range: RANGES.TESTS,
       });
 
       const tests = (response.data.values || []).map(row => ({

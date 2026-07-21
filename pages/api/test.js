@@ -3,6 +3,7 @@ import { getGoogleSheets } from '../../utils/googleSheets';
 import { validateTestPoints } from '../../utils/pointsValidation';
 import { validateTestScheduling, checkScheduleConflicts } from '../../utils/scheduleValidation';
 import { withAdminAuth } from '../../utils/withAdminAuth';
+import { RANGES } from '../../utils/sheetSchema';
 
 async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -104,7 +105,7 @@ async function handler(req, res) {
     // Check if test already exists
     const existingTestResponse = await sheets.spreadsheets.values.get({
       spreadsheetId: process.env.GOOGLE_SHEET_ID,
-      range: 'Tests!A2:G',
+      range: RANGES.TESTS,
     });
 
     const existingTest = (existingTestResponse.data.values || [])
@@ -120,7 +121,7 @@ async function handler(req, res) {
     // Create test
     await sheets.spreadsheets.values.append({
       spreadsheetId: process.env.GOOGLE_SHEET_ID,
-      range: 'Tests!A2:G',
+      range: RANGES.TESTS,
       valueInputOption: 'RAW',
       insertDataOption: 'INSERT_ROWS',
       requestBody: {
@@ -140,7 +141,7 @@ async function handler(req, res) {
     if (type === 'reading' || type === 'listening') {
       await sheets.spreadsheets.values.append({
         spreadsheetId: process.env.GOOGLE_SHEET_ID,
-        range: 'Questions!A2:I',
+        range: RANGES.QUESTIONS,
         valueInputOption: 'RAW',
         insertDataOption: 'INSERT_ROWS',
         requestBody: {
@@ -162,7 +163,7 @@ async function handler(req, res) {
     } else if (type === 'writing') {
       await sheets.spreadsheets.values.append({
         spreadsheetId: process.env.GOOGLE_SHEET_ID,
-        range: 'WritingPrompts!A2:E',
+        range: RANGES.WRITING_PROMPTS,
         valueInputOption: 'RAW',
         insertDataOption: 'INSERT_ROWS',
         requestBody: {
