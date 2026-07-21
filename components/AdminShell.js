@@ -51,6 +51,16 @@ export default function AdminShell({ children }) {
           >
             AI grading
           </Link>
+          <Link
+            href="/admin/proctoring"
+            className={`font-inter text-xs transition-colors ${
+              router.pathname === '/admin/proctoring'
+                ? 'text-ftm-ink'
+                : 'text-ftm-dim hover:text-ftm-slate'
+            }`}
+          >
+            Proctoring
+          </Link>
         </nav>
         <div className="flex items-center gap-4">
           <button
