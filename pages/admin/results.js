@@ -26,7 +26,6 @@ function sectionTone(entry) {
 
 export default function Results() {
   const [dates, setDates] = useState([]);
-  const [mail, setMail] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
@@ -46,7 +45,6 @@ export default function Results() {
       if (!response.ok) throw new Error('Failed to load results');
       const data = await response.json();
       setDates(data.dates || []);
-      setMail(data.mail || null);
       setOpenDate(prev => prev ?? data.dates?.[0]?.date_iso ?? null);
       setError('');
     } catch (err) {
@@ -114,35 +112,6 @@ export default function Results() {
     }
   };
 
-  const sendReport = async (sitting) => {
-    const recipients = mail?.recipients || [];
-    const confirmed = window.confirm(
-      `Email the ${sitting.date_label} results report?\n\n` +
-      `From: ${mail?.sender}\n` +
-      `To:\n  ${recipients.join('\n  ')}\n\n` +
-      `${sitting.summary.students} students. This sends immediately.`
-    );
-    if (!confirmed) return;
-
-    setBusyDate(sitting.date_iso);
-    setError('');
-    setNotice('');
-    try {
-      const response = await fetch('/api/results/report', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ date_iso: sitting.date_iso }),
-      });
-      const data = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(data.message || 'Could not send the report');
-      setNotice(`${data.message}: ${data.recipients.join(', ')}`);
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setBusyDate(null);
-    }
-  };
-
   const chip = (tone) =>
     `font-inter text-[11px] px-2 py-0.5 rounded ${
       tone === 'red' ? 'text-ftm-red bg-ftm-red/[.10]'
@@ -155,12 +124,7 @@ export default function Results() {
     <AdminShell>
       <div className="max-w-6xl mx-auto">
         <div className="mb-5 flex items-start justify-between gap-4 flex-wrap">
-          <div>
-            <h1 className="font-grotesk text-xl text-ftm-ink">Results</h1>
-            <p className="font-inter text-[13px] text-ftm-mut mt-1">
-              Every sitting, newest first. Names come from the Auth sheet, matched on EPT ID.
-            </p>
-          </div>
+          <h1 className="font-grotesk text-xl text-ftm-ink">Results</h1>
           <input
             type="search"
             value={query}
@@ -178,12 +142,6 @@ export default function Results() {
         {notice && (
           <div className="mb-4 px-3 py-2 rounded border border-ftm-green/40 bg-ftm-green/[.08] font-inter text-[13px] text-ftm-green">
             {notice}
-          </div>
-        )}
-        {mail && !mail.configured && (
-          <div className="mb-4 px-3 py-2 rounded border border-ftm-amber/40 bg-ftm-amber/[.08] font-inter text-[13px] text-ftm-amber">
-            Automated email is not configured on this deployment. Reports can still be
-            previewed and downloaded, then sent by hand.
           </div>
         )}
 
@@ -229,17 +187,9 @@ export default function Results() {
                       <button
                         onClick={() => buildPdf(sitting.date_iso, { download: true })}
                         disabled={busyDate === sitting.date_iso}
-                        className="font-inter text-[12px] text-ftm-slate hover:text-ftm-ink disabled:opacity-50"
-                      >
-                        Download PDF
-                      </button>
-                      <button
-                        onClick={() => sendReport(sitting)}
-                        disabled={busyDate === sitting.date_iso || !mail?.configured}
-                        title={mail?.configured ? undefined : 'Email delivery is not configured on this deployment'}
                         className="px-3 py-1.5 rounded bg-ftm-red text-white font-inter font-medium text-[12px] disabled:opacity-50"
                       >
-                        {busyDate === sitting.date_iso ? 'Working…' : 'Email report'}
+                        {busyDate === sitting.date_iso ? 'Working…' : 'Download PDF'}
                       </button>
                     </div>
                   </div>
@@ -297,9 +247,8 @@ export default function Results() {
           </div>
         )}
 
-        {mail && (
+        {!loading && visible.length > 0 && (
           <p className="font-inter text-[11px] text-ftm-dim mt-4">
-            Reports are sent from {mail.sender} to {mail.recipients.join(', ')}.
             “review” means the writing mark could not be read automatically; “ungraded” means the
             script has not been marked yet. Totals appear only once all three sections carry a mark.
           </p>

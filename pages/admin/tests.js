@@ -187,7 +187,6 @@ export default function Tests() {
                     >
                       <div className="flex-[2] min-w-[220px]">
                         <span className="font-inter font-semibold text-[13px] text-ftm-ink">{test.title}</span>
-                        <span className="font-inter text-xs text-ftm-dim ml-2 capitalize">{test.type} test</span>
                       </div>
                       <div className="flex-1 font-inter text-[12.5px] text-ftm-dim2">{test.total_points} pts</div>
                       <div className="flex-1 font-inter text-[12.5px] text-ftm-dim2">

@@ -74,13 +74,33 @@ async function handler(req, res) {
   }
 
   const essay = extractEssay(target.responses);
+
+  // A submission with no writing in it scores zero. This used to return 422
+  // and leave the score cell blank, so the row stayed in the ungraded queue
+  // forever: the queue could never reach zero, and the student never got a
+  // mark or a section total. Nothing is sent to the model, and the audit
+  // column records an automatic zero rather than a grade anyone gave.
   if (!essay) {
-    return res.status(422).json({
-      error: 'empty_submission',
-      message: `${target.student_id} submitted no writing`,
-      rowNumber: target.rowNumber,
-      student_id: target.student_id,
-      remaining: pending.length,
+    try {
+      await saveWritingGrade(target.rowNumber, {
+        score: 0,
+        feedback: 'No response submitted. Recorded as 0 without grading.',
+        model: 'no-submission',
+      });
+    } catch (error) {
+      if (error.code !== 'already_graded') throw error;
+    }
+
+    return res.status(200).json({
+      graded: {
+        rowNumber: target.rowNumber,
+        test_id: target.test_id,
+        student_id: target.student_id,
+        score: 0,
+        wordCount: 0,
+        emptySubmission: true,
+      },
+      remaining: pending.length - 1,
     });
   }
 
