@@ -43,6 +43,35 @@ function parseScore(raw) {
   return { value: null, state: 'review' };
 }
 
+/**
+ * Whether a submission row arrived with nothing in it.
+ *
+ * A zero from an empty row is ambiguous in a way a marked zero is not: the
+ * student may genuinely have written nothing, or they may have been moved to
+ * another machine to finish and this row is the leftover. Both look identical
+ * in the score column, so the emptiness is surfaced separately for a human to
+ * resolve. Applies to every section, not just writing.
+ *
+ * Unparseable-but-present content counts as a response — the same stance the
+ * grader takes, so a storage fault is never read as "submitted nothing".
+ */
+function hasNoResponse(raw) {
+  const text = String(raw ?? '').trim();
+  if (!text) return true;
+
+  let parsed;
+  try {
+    parsed = JSON.parse(text);
+  } catch {
+    return false;
+  }
+
+  if (parsed === null) return true;
+  const values = Array.isArray(parsed) ? parsed
+    : (typeof parsed === 'object' ? Object.values(parsed) : [parsed]);
+  return values.every(value => !String(value ?? '').trim());
+}
+
 export async function getResultsByDate() {
   const sheets = await getGoogleSheets();
 
@@ -148,6 +177,7 @@ export async function getResultsByDate() {
       submittedAt,
       flagged: flagSoFar,
       attempts,
+      noResponse: hasNoResponse(row[S.RESPONSES]),
     };
   }
 
@@ -167,6 +197,10 @@ export async function getResultsByDate() {
           possible += entry.total;
         }
 
+        // Which sections came through empty — named, so whoever checks knows
+        // where to look rather than being told only that something is off.
+        const noResponseSections = SECTIONS.filter(s => record.sections[s]?.noResponse);
+
         return {
           ...record,
           totalScore: earned,
@@ -175,6 +209,8 @@ export async function getResultsByDate() {
           complete,
           needsReview: SECTIONS.some(s => record.sections[s]?.state === 'review'),
           anyFlagged: SECTIONS.some(s => record.sections[s]?.flagged),
+          noResponseSections,
+          hasNoResponse: noResponseSections.length > 0,
         };
       })
         .sort((a, b) => (a.name || a.student_id).localeCompare(b.name || b.student_id));
@@ -188,6 +224,7 @@ export async function getResultsByDate() {
           complete: studentsOut.filter(s => s.complete).length,
           needsReview: studentsOut.filter(s => s.needsReview).length,
           flagged: studentsOut.filter(s => s.anyFlagged).length,
+          noResponse: studentsOut.filter(s => s.hasNoResponse).length,
           averagePercentage: (() => {
             const scored = studentsOut.filter(s => s.overallPercentage !== null && s.complete);
             if (!scored.length) return null;

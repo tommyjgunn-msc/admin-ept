@@ -10,6 +10,7 @@ const INK = '#12171B';
 const MUTED = '#5A6672';
 const RULE = '#D8D8D4';
 const RED = '#E0273F';
+const AMBER = '#9A6B00';
 
 const COLUMNS = [
   { key: 'name', label: 'Student', width: 172 },
@@ -44,7 +45,8 @@ function sectionCell(entry) {
   if (!entry) return '—';
   if (entry.state === 'review') return 'review';
   if (entry.state === 'ungraded') return 'ungraded';
-  return `${entry.score}/${entry.total}`;
+  // Asterisk marks a zero that came from an empty submission, not from marking.
+  return `${entry.score}/${entry.total}${entry.noResponse ? ' *' : ''}`;
 }
 
 function drawHeaderRow(doc, y) {
@@ -96,6 +98,7 @@ export function buildResultsPdf(sitting) {
       `${s.complete} complete`,
       s.averagePercentage !== null ? `average ${s.averagePercentage}%` : 'average n/a',
       `${s.needsReview} needing review`,
+      `${s.noResponse || 0} with no response`,
       `${s.flagged} proctoring-flagged`,
     ];
     doc.text(stats.join('     ·     '), left, summaryY + 7, { width: right - left });
@@ -113,6 +116,7 @@ export function buildResultsPdf(sitting) {
       }
 
       const flagged = student.anyFlagged;
+      const noResponse = student.hasNoResponse;
       doc.font('Helvetica').fontSize(9).fillColor(flagged ? RED : INK);
 
       const values = {
@@ -132,9 +136,13 @@ export function buildResultsPdf(sitting) {
         x += col.width;
       }
 
-      if (flagged) {
-        doc.fontSize(7).fillColor(RED)
-          .text('proctoring flag raised', left, y + 10, { width: 200, lineBreak: false });
+      const notes = [];
+      if (flagged) notes.push('proctoring flag raised');
+      if (noResponse) notes.push(`no response recorded: ${student.noResponseSections.join(', ')}`);
+
+      if (notes.length > 0) {
+        doc.fontSize(7).fillColor(flagged ? RED : AMBER)
+          .text(notes.join('  ·  '), left, y + 10, { width: 360, lineBreak: false });
         y += 8;
       }
 
@@ -155,7 +163,11 @@ export function buildResultsPdf(sitting) {
         '"review" means a mark could not be read automatically and the script needs a human. ' +
         '"ungraded" means the script has not been marked yet. Totals and percentages are shown only ' +
         'where all three sections carry a mark. A proctoring flag records that monitoring signals were ' +
-        'raised during the sitting; it is a prompt to look, not a finding of misconduct.',
+        'raised during the sitting; it is a prompt to look, not a finding of misconduct. ' +
+        'A score marked * is a zero from an empty submission: nothing was recorded for that section. ' +
+        'That may mean the candidate submitted nothing, or that they were moved to another machine ' +
+        'to finish and this record is the leftover — these should be confirmed before the mark is ' +
+        'treated as final.',
         left, y + 10, { width: right - left, align: 'left' }
       );
 

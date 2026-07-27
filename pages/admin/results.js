@@ -14,13 +14,16 @@ function sectionText(entry) {
   if (!entry) return '—';
   if (entry.state === 'review') return 'review';
   if (entry.state === 'ungraded') return 'ungraded';
-  return `${entry.score}/${entry.total}`;
+  // The asterisk marks a zero that came from an empty submission rather than
+  // from marking, so it reads differently at a glance.
+  return `${entry.score}/${entry.total}${entry.noResponse ? ' *' : ''}`;
 }
 
 function sectionTone(entry) {
   if (!entry) return 'text-ftm-dim';
   if (entry.state === 'review') return 'text-ftm-amber';
   if (entry.state === 'ungraded') return 'text-ftm-dim';
+  if (entry.noResponse) return 'text-ftm-amber';
   return 'text-ftm-ink';
 }
 
@@ -174,6 +177,9 @@ export default function Results() {
                       <span className={chip('green')}>avg {s.averagePercentage}%</span>
                     )}
                     {s.needsReview > 0 && <span className={chip('amber')}>{s.needsReview} to review</span>}
+                    {s.noResponse > 0 && (
+                      <span className={chip('amber')}>{s.noResponse} no response</span>
+                    )}
                     {s.flagged > 0 && <span className={chip('red')}>{s.flagged} flagged</span>}
 
                     <div className="ml-auto flex items-center gap-3">
@@ -218,6 +224,14 @@ export default function Results() {
                                 {student.anyFlagged && (
                                   <span className={`${chip('red')} ml-2`}>flagged</span>
                                 )}
+                                {student.hasNoResponse && (
+                                  <span
+                                    className={`${chip('amber')} ml-2`}
+                                    title="Nothing came through for this section. Either the student submitted nothing, or they were moved to another machine to finish — worth checking before the mark stands."
+                                  >
+                                    no response: {student.noResponseSections.join(', ')}
+                                  </span>
+                                )}
                               </td>
                               <td className="px-3 py-2 font-inter text-[12px] text-ftm-mut">{student.student_id}</td>
                               {SECTIONS.map(sec => (
@@ -249,6 +263,10 @@ export default function Results() {
 
         {!loading && visible.length > 0 && (
           <p className="font-inter text-[11px] text-ftm-dim mt-4">
+            A score marked <span className="text-ftm-amber">*</span> is a zero from an empty
+            submission — nothing came through for that section. That can mean the student
+            submitted nothing, or that they were moved to another machine to finish and this row
+            is the leftover, so it is worth checking before the mark stands.
             “review” means the writing mark could not be read automatically; “ungraded” means the
             script has not been marked yet. Totals appear only once all three sections carry a mark.
           </p>
