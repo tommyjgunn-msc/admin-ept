@@ -1,6 +1,6 @@
 // pages/api/results.js — student results grouped by sitting, newest first.
 import { getResultsByDate } from '../../utils/sheets/results';
-import { mailConfigured, REPORT_RECIPIENTS, getSender } from '../../utils/mailer';
+import { mailConfigured, mailTransport, REPORT_RECIPIENTS, getSender } from '../../utils/mailer';
 import { withAdminAuth } from '../../utils/withAdminAuth';
 
 async function handler(req, res) {
@@ -14,6 +14,7 @@ async function handler(req, res) {
     dates,
     mail: {
       configured: mailConfigured(),
+      transport: mailTransport(),
       sender: getSender(),
       recipients: REPORT_RECIPIENTS,
     },

@@ -79,7 +79,10 @@ export default function Results() {
       .filter(d => d.students.length > 0);
   }, [dates, query]);
 
-  const previewReport = async (dateIso) => {
+  // Both routes build the PDF server-side; neither sends anything. Download
+  // exists so the report can be distributed by hand while automated delivery
+  // is unavailable.
+  const buildPdf = async (dateIso, { download }) => {
     setBusyDate(dateIso);
     setError('');
     setNotice('');
@@ -93,8 +96,17 @@ export default function Results() {
         const data = await response.json().catch(() => ({}));
         throw new Error(data.message || 'Could not build the report');
       }
-      const blob = await response.blob();
-      window.open(URL.createObjectURL(blob), '_blank', 'noopener');
+      const url = URL.createObjectURL(await response.blob());
+      if (download) {
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `EPT-results-${dateIso}.pdf`;
+        link.click();
+        setNotice(`Downloaded EPT-results-${dateIso}.pdf`);
+      } else {
+        window.open(url, '_blank', 'noopener');
+      }
+      setTimeout(() => URL.revokeObjectURL(url), 30000);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -170,7 +182,8 @@ export default function Results() {
         )}
         {mail && !mail.configured && (
           <div className="mb-4 px-3 py-2 rounded border border-ftm-amber/40 bg-ftm-amber/[.08] font-inter text-[13px] text-ftm-amber">
-            Email is not configured on this deployment — reports can be previewed but not sent.
+            Automated email is not configured on this deployment. Reports can still be
+            previewed and downloaded, then sent by hand.
           </div>
         )}
 
@@ -207,18 +220,26 @@ export default function Results() {
 
                     <div className="ml-auto flex items-center gap-3">
                       <button
-                        onClick={() => previewReport(sitting.date_iso)}
+                        onClick={() => buildPdf(sitting.date_iso, { download: false })}
                         disabled={busyDate === sitting.date_iso}
                         className="font-inter text-[12px] text-ftm-slate hover:text-ftm-ink disabled:opacity-50"
                       >
-                        Preview PDF
+                        Preview
+                      </button>
+                      <button
+                        onClick={() => buildPdf(sitting.date_iso, { download: true })}
+                        disabled={busyDate === sitting.date_iso}
+                        className="font-inter text-[12px] text-ftm-slate hover:text-ftm-ink disabled:opacity-50"
+                      >
+                        Download PDF
                       </button>
                       <button
                         onClick={() => sendReport(sitting)}
                         disabled={busyDate === sitting.date_iso || !mail?.configured}
+                        title={mail?.configured ? undefined : 'Email delivery is not configured on this deployment'}
                         className="px-3 py-1.5 rounded bg-ftm-red text-white font-inter font-medium text-[12px] disabled:opacity-50"
                       >
-                        {busyDate === sitting.date_iso ? 'Working…' : 'Generate & send report'}
+                        {busyDate === sitting.date_iso ? 'Working…' : 'Email report'}
                       </button>
                     </div>
                   </div>

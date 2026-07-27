@@ -18,8 +18,26 @@ export function getSender() {
   return process.env.GMAIL_SENDER || 'thewritingcentre@alueducation.com';
 }
 
+/**
+ * Which delivery route is available, in preference order.
+ *
+ * Deliberately not SMTP: Vercel's serverless functions are a poor place for
+ * outbound SMTP (their own guidance is to use an HTTP email service, and
+ * port 587 is widely reported to hang there), so a Gmail app password would
+ * authenticate fine and then time out. Both routes below are HTTPS.
+ *
+ *  'resend' — HTTP API, needs only an API key, no Workspace admin involved.
+ *  'gmail'  — Gmail API as the writing-centre mailbox; needs domain-wide
+ *             delegation, which only a Workspace admin can grant.
+ */
+export function mailTransport() {
+  if (process.env.RESEND_API_KEY) return 'resend';
+  if (process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL && process.env.GOOGLE_PRIVATE_KEY) return 'gmail';
+  return null;
+}
+
 export function mailConfigured() {
-  return Boolean(process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL && process.env.GOOGLE_PRIVATE_KEY);
+  return mailTransport() !== null;
 }
 
 const MISSING_DELEGATION =
@@ -74,14 +92,66 @@ function buildMime({ from, to, subject, text, attachment }) {
 }
 
 /**
+ * Send over the Resend HTTP API. Sending *from* an @alueducation.com address
+ * needs that domain verified in Resend (DNS records); until then the message
+ * goes out from Resend's own sending domain with the writing-centre address
+ * as Reply-To, so replies still land in the right inbox.
+ */
+async function sendViaResend({ to, subject, text, attachment }) {
+  const from = process.env.RESEND_FROM || 'EPT Results <onboarding@resend.dev>';
+
+  const response = await fetch('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      from,
+      to,
+      reply_to: getSender(),
+      subject,
+      text,
+      ...(attachment && {
+        attachments: [{
+          filename: attachment.filename,
+          content: attachment.content.toString('base64'),
+        }],
+      }),
+    }),
+  });
+
+  const data = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    const detail = String(data?.message || data?.error || `HTTP ${response.status}`);
+    const error = new Error(
+      /domain|from/i.test(detail)
+        ? `Resend rejected the sender address: ${detail}. Either verify the domain in Resend ` +
+          'or leave RESEND_FROM unset to send from Resend\'s own domain.'
+        : `Resend send failed: ${detail.slice(0, 200)}`
+    );
+    error.code = 'send_failed';
+    throw error;
+  }
+
+  return { id: data.id, to, from };
+}
+
+/**
  * Send one message, optionally with a single attachment.
  * Throws with .code set to a caller-friendly reason.
  */
 export async function sendMail({ to, subject, text, attachment }) {
-  if (!mailConfigured()) {
-    const error = new Error('Google service-account credentials are not set on this deployment.');
+  const transport = mailTransport();
+  if (!transport) {
+    const error = new Error('No email transport is configured on this deployment.');
     error.code = 'mail_not_configured';
     throw error;
+  }
+
+  if (transport === 'resend') {
+    return sendViaResend({ to, subject, text, attachment });
   }
 
   const from = getSender();
