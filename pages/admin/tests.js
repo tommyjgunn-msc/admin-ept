@@ -191,7 +191,9 @@ export default function Tests() {
                       </div>
                       <div className="flex-1 font-inter text-[12.5px] text-ftm-dim2">{test.total_points} pts</div>
                       <div className="flex-1 font-inter text-[12.5px] text-ftm-dim2">
-                        {test.status === 'completed' ? `${test.submissions_count || 0} submissions` : ''}
+                        {test.submissions_count > 0
+                          ? `${test.submissions_count} submission${test.submissions_count === 1 ? '' : 's'}`
+                          : test.status === 'completed' ? 'no submissions' : ''}
                       </div>
                       <div className="flex-none flex gap-3.5">
                         <button
