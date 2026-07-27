@@ -42,6 +42,16 @@ export default function AdminShell({ children }) {
             Test dates
           </Link>
           <Link
+            href="/admin/results"
+            className={`font-inter text-xs transition-colors ${
+              router.pathname === '/admin/results'
+                ? 'text-ftm-ink'
+                : 'text-ftm-dim hover:text-ftm-slate'
+            }`}
+          >
+            Results
+          </Link>
+          <Link
             href="/admin/grading"
             className={`font-inter text-xs transition-colors ${
               router.pathname === '/admin/grading'
