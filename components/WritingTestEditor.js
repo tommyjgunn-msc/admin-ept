@@ -43,7 +43,7 @@ export default function WritingTestEditor({ content, onChange }) {
           <button
             type="button"
             onClick={addPrompt}
-            className="text-ftm-slate hover:text-ftm-ink"
+            className="font-inter font-semibold text-[13px] text-ftm-link hover:text-ftm-ink underline underline-offset-4 transition-colors"
           >
             Add Prompt
           </button>
@@ -51,21 +51,21 @@ export default function WritingTestEditor({ content, onChange }) {
       </div>
 
       {prompts.map((prompt, index) => (
-        <div key={index} className="bg-ftm-up rounded-lg p-6 space-y-4">
+        <div key={index} className="bg-ftm-up rounded p-6 space-y-4">
           <div className="flex justify-between items-start">
             <h4 className="text-md font-medium">Prompt {index + 1}</h4>
             <div className="flex space-x-2">
               <button
                 type="button"
                 onClick={() => setPreviewPrompt(prompt)}
-                className="text-ftm-slate hover:text-ftm-ink"
+                className="font-inter font-semibold text-[13px] text-ftm-link hover:text-ftm-ink underline underline-offset-4 transition-colors"
               >
                 Preview
               </button>
               <button
                 type="button"
                 onClick={() => removePrompt(index)}
-                className="text-ftm-red hover:text-ftm-red"
+                className="text-ftm-ochre hover:text-ftm-ochre"
               >
                 Remove
               </button>
@@ -73,13 +73,13 @@ export default function WritingTestEditor({ content, onChange }) {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-ftm-slate">
+            <label className="block font-inter font-bold text-[13px] text-ftm-ink mb-1.5">
               Type
             </label>
             <select
               value={prompt.type}
               onChange={(e) => updatePrompt(index, 'type', e.target.value)}
-              className="mt-1 block w-full border border-white/[.16] rounded-md shadow-sm p-2"
+              className="mt-1 block w-full bg-ftm-night border-2 border-ftm-line2 focus:border-ftm-ink px-3 py-2 font-inter text-[14px] text-ftm-ink transition-colors"
             >
               <option value="argumentative">Argumentative</option>
               <option value="persuasive">Persuasive</option>
@@ -88,14 +88,14 @@ export default function WritingTestEditor({ content, onChange }) {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-ftm-slate">
+            <label className="block font-inter font-bold text-[13px] text-ftm-ink mb-1.5">
               Prompt Text
             </label>
             <textarea
               value={prompt.text}
               onChange={(e) => updatePrompt(index, 'text', e.target.value)}
               rows={4}
-              className="mt-1 block w-full border border-white/[.16] rounded-md shadow-sm p-2"
+              className="mt-1 block w-full bg-ftm-night border-2 border-ftm-line2 focus:border-ftm-ink px-3 py-2 font-inter text-[14px] text-ftm-ink transition-colors"
               required
             />
           </div>
@@ -105,14 +105,14 @@ export default function WritingTestEditor({ content, onChange }) {
                 labelled "Points" with max=50 for a long time, which fought the
                 default of 500 and invited someone to "fix" real word limits
                 down to 50. */}
-            <label className="block text-sm font-medium text-ftm-slate">
+            <label className="block font-inter font-bold text-[13px] text-ftm-ink mb-1.5">
               Word Limit
             </label>
             <input
               type="number"
               value={prompt.wordLimit}
               onChange={(e) => updatePrompt(index, 'wordLimit', parseInt(e.target.value))}
-              className="mt-1 block w-32 border border-white/[.16] rounded-md shadow-sm p-2"
+              className="mt-1 block w-32 bg-ftm-night border-2 border-ftm-line2 focus:border-ftm-ink px-3 py-2 font-inter text-[14px] text-ftm-ink tabular-nums transition-colors"
               min="100"
               max="1000"
               required
@@ -127,7 +127,7 @@ export default function WritingTestEditor({ content, onChange }) {
       >
         {previewPrompt && (
           <div className="space-y-6">
-            <div className="bg-ftm-up p-6 rounded-lg">
+            <div className="bg-ftm-up p-6 rounded">
               <div className="mb-4">
                 <span className="text-sm font-medium text-ftm-mut uppercase">
                   {previewPrompt.type} Essay
@@ -140,9 +140,9 @@ export default function WritingTestEditor({ content, onChange }) {
                 Word limit: {previewPrompt.wordLimit}
               </div>
             </div>
-            <div className="border rounded-lg p-4">
+            <div className="border rounded p-4">
               <textarea
-                className="w-full h-64 p-4 border rounded-lg"
+                className="w-full h-64 p-4 border rounded"
                 placeholder="Student response will appear here..."
                 disabled
               />

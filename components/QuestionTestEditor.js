@@ -108,24 +108,24 @@ export default function QuestionTestEditor({ type, content, onChange }) {
         <button
           type="button"
           onClick={addSection}
-          className="text-ftm-slate hover:text-ftm-ink"
+          className="font-inter font-semibold text-[13px] text-ftm-link hover:text-ftm-ink underline underline-offset-4 transition-colors"
         >
           Add Section
         </button>
       </div>
 
       {sections.map((section, sectionIndex) => (
-        <div key={sectionIndex} className="bg-ftm-up rounded-lg p-6 space-y-6">
+        <div key={sectionIndex} className="bg-ftm-up rounded p-6 space-y-6">
           <div className="flex justify-between items-start">
             <div className="flex-1">
-              <label className="block text-sm font-medium text-ftm-slate">
+              <label className="block font-inter font-bold text-[13px] text-ftm-ink mb-1.5">
                 Section Title
               </label>
               <input
                 type="text"
                 value={section.title}
                 onChange={(e) => updateSection(sectionIndex, 'title', e.target.value)}
-                className="mt-1 block w-full border border-white/[.16] rounded-md shadow-sm p-2"
+                className="mt-1 block w-full bg-ftm-night border-2 border-ftm-line2 focus:border-ftm-ink px-3 py-2 font-inter text-[14px] text-ftm-ink transition-colors"
                 required
               />
             </div>
@@ -133,14 +133,14 @@ export default function QuestionTestEditor({ type, content, onChange }) {
               <button
                 type="button"
                 onClick={() => setPreviewSection(section)}
-                className="text-ftm-slate hover:text-ftm-ink"
+                className="font-inter font-semibold text-[13px] text-ftm-link hover:text-ftm-ink underline underline-offset-4 transition-colors"
               >
                 Preview
               </button>
               <button
                 type="button"
                 onClick={() => removeSection(sectionIndex)}
-                className="text-ftm-red hover:text-ftm-red"
+                className="text-ftm-ochre hover:text-ftm-ochre"
               >
                 Remove Section
               </button>
@@ -149,14 +149,14 @@ export default function QuestionTestEditor({ type, content, onChange }) {
 
           {type === 'reading' && (
             <div>
-              <label className="block text-sm font-medium text-ftm-slate">
+              <label className="block font-inter font-bold text-[13px] text-ftm-ink mb-1.5">
                 Reading Passage
               </label>
               <textarea
                 value={section.content}
                 onChange={(e) => updateSection(sectionIndex, 'content', e.target.value)}
                 rows={6}
-                className="mt-1 block w-full border border-white/[.16] rounded-md shadow-sm p-2"
+                className="mt-1 block w-full bg-ftm-night border-2 border-ftm-line2 focus:border-ftm-ink px-3 py-2 font-inter text-[14px] text-ftm-ink transition-colors"
                 required
               />
             </div>
@@ -164,7 +164,7 @@ export default function QuestionTestEditor({ type, content, onChange }) {
 
           <div className="space-y-4">
             {section.questions.map((question, questionIndex) => (
-              <div key={questionIndex} className="border border-white/[.08] rounded-md p-4">
+              <div key={questionIndex} className="border-t border-ftm-line pt-5">
                 <div className="flex justify-between items-start mb-4">
                   <h4 className="text-sm font-medium text-ftm-slate">
                     Question {questionIndex + 1}
@@ -172,7 +172,7 @@ export default function QuestionTestEditor({ type, content, onChange }) {
                   <button
                     type="button"
                     onClick={() => removeQuestion(sectionIndex, questionIndex)}
-                    className="text-ftm-red hover:text-ftm-red text-sm"
+                    className="text-ftm-ochre hover:text-ftm-ochre text-sm"
                   >
                     Remove Question
                   </button>
@@ -184,7 +184,7 @@ export default function QuestionTestEditor({ type, content, onChange }) {
                       type="text"
                       value={question.text}
                       onChange={(e) => updateQuestion(sectionIndex, questionIndex, 'text', e.target.value)}
-                      className="block w-full border border-white/[.16] rounded-md shadow-sm p-2"
+                      className="block w-full bg-ftm-night border-2 border-ftm-line2 focus:border-ftm-ink px-3 py-2 font-inter text-[14px] text-ftm-ink transition-colors"
                       placeholder="Question text"
                       required
                     />
@@ -201,7 +201,7 @@ export default function QuestionTestEditor({ type, content, onChange }) {
                             newOptions[optionIndex] = e.target.value;
                             updateQuestion(sectionIndex, questionIndex, 'options', newOptions);
                           }}
-                          className="block w-full border border-white/[.16] rounded-md shadow-sm p-2"
+                          className="block w-full bg-ftm-night border-2 border-ftm-line2 focus:border-ftm-ink px-3 py-2 font-inter text-[14px] text-ftm-ink transition-colors"
                           placeholder={`Option ${optionIndex + 1}`}
                           required
                         />
@@ -217,14 +217,14 @@ export default function QuestionTestEditor({ type, content, onChange }) {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-ftm-slate">
+                    <label className="block font-inter font-bold text-[13px] text-ftm-ink mb-1.5">
                       Points
                     </label>
                     <input
                       type="number"
                       value={question.points}
                       onChange={(e) => updateQuestion(sectionIndex, questionIndex, 'points', parseInt(e.target.value))}
-                      className="mt-1 w-20 border border-white/[.16] rounded-md shadow-sm p-2"
+                      className="mt-1 w-20 bg-ftm-night border-2 border-ftm-line2 focus:border-ftm-ink px-3 py-2 font-inter text-[14px] text-ftm-ink tabular-nums transition-colors"
                       min="1"
                       required
                     />
@@ -236,7 +236,7 @@ export default function QuestionTestEditor({ type, content, onChange }) {
             <button
               type="button"
               onClick={() => addQuestion(sectionIndex)}
-              className="mt-4 text-sm text-ftm-slate hover:text-ftm-ink"
+              className="mt-4 text-sm font-inter font-semibold text-[13px] text-ftm-link hover:text-ftm-ink underline underline-offset-4 transition-colors"
             >
               Add Question
             </button>
@@ -250,7 +250,7 @@ export default function QuestionTestEditor({ type, content, onChange }) {
       >
         {previewSection && (
           <div className="space-y-8">
-            <div className="bg-ftm-up p-6 rounded-lg">
+            <div className="bg-ftm-up p-6 rounded">
               <h3 className="text-xl font-medium mb-4">{previewSection.title}</h3>
               {type === 'reading' && (
                 <div className="prose max-w-none mb-8">
@@ -259,7 +259,7 @@ export default function QuestionTestEditor({ type, content, onChange }) {
               )}
               <div className="space-y-6">
                 {previewSection.questions.map((question, index) => (
-                  <div key={index} className="border rounded-lg p-4">
+                  <div key={index} className="border rounded p-4">
                     <p className="font-medium mb-3">
                       {index + 1}. {question.text}
                     </p>

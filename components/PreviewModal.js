@@ -73,13 +73,13 @@ const transformContent = (rawContent, testType) => {
 // Split the modal into multiple components to avoid conditional returns
 function ErrorModal({ onClose }) {
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-ftm-card rounded-lg p-6">
-        <h2 className="text-xl font-bold text-ftm-red">Error</h2>
+    <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
+      <div className="bg-ftm-card rounded p-6">
+        <h2 className="text-xl font-bold text-ftm-ochre">Error</h2>
         <p className="mt-2">Invalid test data provided.</p>
         <button
           onClick={onClose}
-          className="mt-4 px-4 py-2 bg-white/10 rounded hover:bg-white/[.14]"
+          className="mt-4 px-4 py-2 bg-ftm-up hover:bg-ftm-card border border-ftm-line transition-colors"
         >
           Close
         </button>
@@ -165,37 +165,37 @@ function ModalContent({ test, content, onClose }) {
 
   return (
     <>
-      {/* Close button */}
-      <div className="absolute top-2 right-2 z-10">
-        <button 
-          onClick={onClose}
-          className="bg-white/10 text-ftm-slate rounded-full p-2 hover:bg-white/[.14]"
-          aria-label="Close preview"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-          </svg>
-        </button>
-      </div>
-      
-      {/* Print button */}
-      <div className="absolute top-2 right-14 z-10">
-        <button 
+      {/* Preview controls. Were two circular icon-only buttons in the corner
+          with no accessible label beyond aria-label and no hover change (both
+          hover states resolved to the same colour). Now labelled text. */}
+      <div className="absolute top-3 right-4 z-10 flex items-center gap-4 print:hidden">
+        <button
           onClick={handlePrint}
-          className="bg-white/10 text-ftm-slate rounded-full p-2 hover:bg-white/[.14]"
-          aria-label="Print test"
+          className="font-inter font-semibold text-[12px] text-ftm-mut hover:text-ftm-ink underline underline-offset-4 transition-colors"
         >
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
-          </svg>
+          Print
+        </button>
+        <button
+          onClick={onClose}
+          className="font-inter font-semibold text-[12px] text-ftm-mut hover:text-ftm-ink underline underline-offset-4 transition-colors"
+        >
+          Close preview
         </button>
       </div>
-      
-      <div className="bg-white/10 px-4 py-2 flex justify-between items-center">
-        <span>Section {currentSection + 1} of {totalSections}</span>
-        <span>Time Remaining: {timeRemaining}</span>
+
+      {/* The same status band the candidate sees, so a preview shows the real
+          thing rather than an approximation of it. */}
+      <div className="bg-ftm-bar border-b border-ftm-line2 px-6 py-3 flex justify-between items-baseline gap-6">
+        <span className="font-inter text-[13px] text-ftm-mut">
+          Section <span className="tabular-nums">{currentSection + 1}</span> of{' '}
+          <span className="tabular-nums">{totalSections}</span>
+        </span>
+        <span className="flex items-baseline gap-3 border-l-[6px] border-ftm-line2 pl-3">
+          <span className="font-inter font-bold text-[10px] tracking-[.14em] uppercase text-ftm-dim">Time left</span>
+          <time className="font-grotesk font-bold text-[17px] text-ftm-ink tabular-nums">{timeRemaining}</time>
+        </span>
       </div>
-      
+
       <div className="flex-1 overflow-auto p-6">
         {test.type === 'writing' ? (
           <WritingPreview 
@@ -219,7 +219,7 @@ function ModalContent({ test, content, onClose }) {
           disabled={currentSection === 0}
           className={`px-4 py-2 rounded ${currentSection === 0 
             ? 'text-ftm-dim cursor-not-allowed' 
-            : 'text-ftm-slate hover:bg-ftm-slate/[.12]'}`}
+            : 'text-ftm-slate hover:bg-ftm-up'}`}
         >
           Previous Section
         </button>
@@ -231,7 +231,7 @@ function ModalContent({ test, content, onClose }) {
               setCurrentSection(prev => prev + 1);
             }
           }}
-          className="px-4 py-2 bg-ftm-red text-white rounded hover:bg-[#C51F35]"
+          className="px-4 py-2 bg-ftm-crimson text-white hover:bg-ftm-crimsondeep font-bold transition-colors"
         >
           {currentSection >= totalSections - 1 ? 'Close Preview' : 'Next Section'}
         </button>
@@ -251,8 +251,8 @@ export default function PreviewModal({ isOpen, onClose, test = {}, content = [] 
 
   // Ensure we have a container even when showing errors
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 print:bg-ftm-card print:bg-opacity-100">
-      <div className="bg-ftm-card w-full max-w-5xl h-[90vh] flex flex-col rounded-lg relative print:h-auto print:max-h-none">
+    <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 print:bg-ftm-card">
+      <div className="bg-ftm-card w-full max-w-5xl h-[90vh] flex flex-col rounded relative print:h-auto print:max-h-none">
         {!test || !test.type ? (
           <ErrorModal onClose={onClose} />
         ) : (
@@ -275,7 +275,7 @@ function WritingPreview({ prompt, response, onChange }) {
 
   return (
     <div className="space-y-6">
-      <div className="bg-ftm-up p-6 rounded-lg">
+      <div className="bg-ftm-card border border-ftm-line p-6">
         <div className="mb-4">
           <span className="uppercase text-sm font-semibold text-ftm-mut">
             {promptType} ESSAY
@@ -290,7 +290,7 @@ function WritingPreview({ prompt, response, onChange }) {
           value={response}
           onChange={onChange}
           placeholder="Type your essay here..."
-          className="w-full h-64 p-4 border rounded-lg resize-none"
+          className="w-full h-64 p-4 border rounded resize-none"
           rows={10}
         />
         <div className="mt-2 text-sm text-ftm-mut flex justify-between">
@@ -307,13 +307,13 @@ function QuestionPreview({ section, type, responses, onSelect }) {
   console.log("QuestionPreview received section:", section);
   
   if (!section) {
-    return <div className="p-4 bg-ftm-amber/[.14] border border-ftm-amber/50 rounded">
+    return <div className="p-4 border-l-[6px] border-ftm-ochre bg-ftm-card">
       No section data available
     </div>;
   }
   
   if (!section.questions || !Array.isArray(section.questions) || section.questions.length === 0) {
-    return <div className="p-4 bg-ftm-amber/[.14] border border-ftm-amber/50 rounded">
+    return <div className="p-4 border-l-[6px] border-ftm-ochre bg-ftm-card">
       <p>No questions available for this section.</p>
       <p className="mt-2"><strong>Debug info:</strong></p>
       <pre className="mt-1 text-xs overflow-auto">{JSON.stringify(section, null, 2)}</pre>
@@ -324,7 +324,7 @@ function QuestionPreview({ section, type, responses, onSelect }) {
     <div className="space-y-8">
       {/* Reading Passage or Listening Instructions */}
       {type === 'reading' && section.content && (
-        <div className="bg-ftm-up p-6 rounded-lg prose max-w-none">
+        <div className="bg-ftm-card border border-ftm-line p-6 max-w-measure">
           <h3 className="font-medium text-lg mb-4">{section.title}</h3>
           <div className="whitespace-pre-wrap">{section.content}</div>
         </div>
@@ -333,7 +333,7 @@ function QuestionPreview({ section, type, responses, onSelect }) {
       {/* Questions */}
       <div className="space-y-6">
         {section.questions.filter(Boolean).map((question, qIndex) => (
-          <div key={qIndex} className="border rounded-lg p-4">
+          <div key={qIndex} className="border rounded p-4">
             <p className="font-medium mb-4">
               {qIndex + 1}. {question.text}
             </p>
@@ -341,7 +341,7 @@ function QuestionPreview({ section, type, responses, onSelect }) {
               {Array.isArray(question.options) && question.options.map((option, oIndex) => (
                 <label 
                   key={oIndex} 
-                  className="flex items-center space-x-3 cursor-pointer hover:bg-ftm-up p-2 rounded"
+                  className="flex items-center space-x-3 cursor-pointer hover:bg-ftm-up p-2"
                 >
                   <input
                     type="radio"

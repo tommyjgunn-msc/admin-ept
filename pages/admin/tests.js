@@ -1,4 +1,11 @@
-// pages/admin/tests.js — Futurimi test management (dense grouped rows)
+// pages/admin/tests.js — tests, grouped by sitting.
+//
+// The rows used to live inside a rounded, bordered card with no column headers,
+// so "40" and "96" floated unlabelled and could not be compared down a column.
+// It is now a real table per sitting: ruled rows, a sticky header, figures
+// right-aligned and tabular. The four coloured action links became one link
+// colour — a row where every action is a different colour teaches you to stop
+// reading colour at all.
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import AdminShell from '../../components/AdminShell';
@@ -31,7 +38,7 @@ export default function Tests() {
         router.push('/login');
         return;
       }
-      if (!response.ok) throw new Error('Failed to fetch tests');
+      if (!response.ok) throw new Error('The server did not return the test list.');
       const data = await response.json();
 
       // Group tests by date
@@ -69,12 +76,12 @@ export default function Tests() {
   };
 
   const deleteTest = async (testId) => {
-    if (!window.confirm('Are you sure you want to delete this test?')) return;
+    if (!window.confirm('Delete this test? Submissions already made against it are not deleted, but the test will no longer be served.')) return;
     try {
       const response = await fetch(`/api/tests/${testId}`, {
         method: 'DELETE',
       });
-      if (!response.ok) throw new Error('Failed to delete test');
+      if (!response.ok) throw new Error('The test could not be deleted.');
       fetchTests(); // Refresh the list
     } catch (error) {
       setError(error.message);
@@ -89,7 +96,7 @@ export default function Tests() {
     const day = String(today.getDate()).padStart(2, '0');
     const todayDate = `${year}-${month}-${day}`;
 
-    if (!window.confirm(`Are you sure you want to duplicate this test to today (${todayDate})?`)) return;
+    if (!window.confirm(`Copy this test to today (${todayDate})?`)) return;
 
     setDuplicating(true);
     try {
@@ -107,129 +114,171 @@ export default function Tests() {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.message || 'Failed to duplicate test');
+        throw new Error(data.message || 'The test could not be copied.');
       }
 
-      alert('Test duplicated successfully for today');
       fetchTests(); // Refresh the list
     } catch (error) {
       setError(error.message);
-      alert(`Error duplicating test: ${error.message}`);
     } finally {
       setDuplicating(false);
     }
   };
 
-  // Status chip styles (dark theme)
+  // Status. Colour is never the only signal — .ftm-status prints a square
+  // swatch before the word, and the word stands on its own.
   const statusStyles = {
-    upcoming: 'text-ftm-indigo bg-ftm-indigo/[.14]',
-    active: 'text-ftm-green bg-ftm-green/[.14]',
-    completed: 'text-ftm-dim2 bg-ftm-slate/[.14]'
+    upcoming: 'text-ftm-slate',
+    active: 'text-ftm-green',
+    completed: 'text-ftm-dim',
   };
 
   if (loading) return (
     <AdminShell>
-      <div className="flex items-center justify-center py-24">
-        <p className="text-ftm-mut">Loading tests&hellip;</p>
+      <div className="max-w-[880px]" aria-busy="true">
+        <div className="ftm-skeleton h-7 w-52 mb-8" />
+        <div className="ftm-skeleton h-3 w-64 mb-3" />
+        {[0, 1, 2].map((i) => (
+          <div key={i} className="flex gap-6 py-3.5 border-b border-ftm-line">
+            <div className="ftm-skeleton h-4 flex-[2]" />
+            <div className="ftm-skeleton h-4 flex-1" />
+            <div className="ftm-skeleton h-4 flex-1" />
+          </div>
+        ))}
       </div>
     </AdminShell>
   );
 
   if (error) return (
     <AdminShell>
-      <div className="flex items-center justify-center py-24">
-        <p className="text-ftm-red">Error: {error}</p>
+      <div className="max-w-measure border-l-[6px] border-ftm-crimson pl-6 py-2" role="alert">
+        <h1 className="font-grotesk font-bold text-[21px] text-ftm-ink mb-2">Could not load the tests</h1>
+        <p className="font-inter text-[16px] leading-relaxed text-ftm-mut mb-6">{error}</p>
+        <button
+          onClick={() => { setError(''); setLoading(true); fetchTests(); }}
+          className="font-inter font-bold text-[15px] text-white bg-ftm-crimson hover:bg-ftm-crimsondeep px-6 py-3 transition-colors"
+        >
+          Try again
+        </button>
       </div>
     </AdminShell>
   );
 
   return (
     <AdminShell>
-      <div className="max-w-[1160px] mx-auto">
-        {/* Header */}
-        <div className="flex justify-between items-center mb-5">
-          <h1 className="font-grotesk font-bold text-[19px] text-ftm-ink">Test management</h1>
+      <div className="max-w-[880px]">
+        <div className="flex flex-wrap justify-between items-end gap-4 mb-10">
+          <div>
+            <h1 className="font-grotesk font-bold text-[26px] text-ftm-ink">Tests</h1>
+            <p className="font-inter text-[14px] text-ftm-mut mt-1">
+              Grouped by sitting, oldest first.
+            </p>
+          </div>
           <button
             onClick={() => router.push('/admin/create-test')}
-            className="font-inter font-semibold text-[12.5px] text-white bg-ftm-red hover:bg-[#C51F35] rounded-md px-4 py-[9px] transition-colors disabled:opacity-50"
+            className="font-inter font-bold text-[14px] text-white bg-ftm-crimson hover:bg-ftm-crimsondeep px-5 py-2.5 transition-colors disabled:opacity-50"
             disabled={duplicating}
           >
-            + Create new test
+            Create a test
           </button>
         </div>
 
-        {/* Test groups by date */}
-        <div className="space-y-[18px]">
+        <div className="space-y-12">
           {Object.entries(tests).map(([date, dateTests]) => {
             const groupStatus = dateTests.some(t => t.status === 'active')
               ? 'active'
               : dateTests.every(t => t.status === 'completed') ? 'completed' : 'upcoming';
             return (
-              <div key={date}>
-                <div className="flex items-center gap-2 mb-2">
-                  <span className="font-inter font-semibold text-[11px] text-ftm-ink uppercase tracking-[.06em]">
-                    {new Date(date).toLocaleDateString('en-US', {
-                      weekday: 'long',
-                      year: 'numeric',
-                      month: 'long',
-                      day: 'numeric'
-                    })} &middot; ALU Kigali
-                  </span>
-                  <span className={`font-inter font-semibold text-[10.5px] px-[7px] py-0.5 rounded-full ${statusStyles[groupStatus]}`}>
+              <section key={date}>
+                <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1 mb-3">
+                  <h2 className="font-grotesk font-bold text-[17px] text-ftm-ink">
+                    {new Date(date).toLocaleDateString('en-GB', {
+                      weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
+                    })}
+                  </h2>
+                  <span className={`ftm-status font-semibold ${statusStyles[groupStatus]}`}>
                     {groupStatus}
                   </span>
+                  <span className="font-inter text-[13px] text-ftm-dim">ALU Kigali</span>
                 </div>
-                <div className="bg-ftm-card border border-white/[.08] rounded-lg overflow-hidden">
-                  {dateTests.map((test, idx) => (
-                    <div
-                      key={test.test_id}
-                      className={`flex flex-wrap items-center gap-y-2 px-4 py-[11px] ${idx < dateTests.length - 1 ? 'border-b border-white/[.06]' : ''}`}
-                    >
-                      <div className="flex-[2] min-w-[220px]">
-                        <span className="font-inter font-semibold text-[13px] text-ftm-ink">{test.title}</span>
-                      </div>
-                      <div className="flex-1 font-inter text-[12.5px] text-ftm-dim2">{test.total_points} pts</div>
-                      <div className="flex-1 font-inter text-[12.5px] text-ftm-dim2">
-                        {test.submissions_count > 0
-                          ? `${test.submissions_count} submission${test.submissions_count === 1 ? '' : 's'}`
-                          : test.status === 'completed' ? 'no submissions' : ''}
-                      </div>
-                      <div className="flex-none flex gap-3.5">
-                        <button
-                          onClick={() => duplicateTest(test.test_id)}
-                          className="font-inter font-semibold text-xs text-ftm-slate hover:text-ftm-ink transition-colors disabled:opacity-50"
-                          disabled={duplicating}
-                        >
-                          {duplicating ? 'Duplicating…' : 'Duplicate'}
-                        </button>
-                        <button
-                          onClick={() => router.push(`/admin/edit-test/${test.test_id}`)}
-                          className="font-inter font-semibold text-xs text-ftm-slate hover:text-ftm-ink transition-colors"
-                        >
-                          Edit
-                        </button>
-                        <button
-                          onClick={() => router.push(`/admin/test-stats/${test.test_id}`)}
-                          className="font-inter font-semibold text-xs text-ftm-green hover:brightness-125 transition-all"
-                        >
-                          Stats
-                        </button>
-                        <button
-                          onClick={() => deleteTest(test.test_id)}
-                          className="font-inter font-semibold text-xs text-ftm-red hover:brightness-125 transition-all"
-                        >
-                          Delete
-                        </button>
-                      </div>
-                    </div>
-                  ))}
+
+                <div className="overflow-x-auto">
+                  <table className="ftm-table min-w-[640px]">
+                    <caption className="sr-only">Tests authored for this sitting</caption>
+                    <thead>
+                      <tr>
+                        <th scope="col">Test</th>
+                        <th scope="col" className="num">Points</th>
+                        <th scope="col" className="num">Submissions</th>
+                        <th scope="col" className="end">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {dateTests.map((test) => (
+                        <tr key={test.test_id}>
+                          <th scope="row" className="text-left py-2.5 pr-4 border-b border-ftm-line align-top font-semibold text-ftm-ink">
+                            {test.title}
+                          </th>
+                          <td className="num">{test.total_points}</td>
+                          <td className="num">
+                            {test.submissions_count > 0
+                              ? test.submissions_count
+                              : <span className="text-ftm-dim">{test.status === 'completed' ? '0' : '—'}</span>}
+                          </td>
+                          <td className="py-2.5 border-b border-ftm-line align-top text-right whitespace-nowrap">
+                            <span className="inline-flex gap-4">
+                              <button
+                                onClick={() => router.push(`/admin/edit-test/${test.test_id}`)}
+                                className="font-inter font-semibold text-[12px] text-ftm-link hover:text-ftm-ink underline underline-offset-4 transition-colors"
+                              >
+                                Edit
+                              </button>
+                              <button
+                                onClick={() => router.push(`/admin/test-stats/${test.test_id}`)}
+                                className="font-inter font-semibold text-[12px] text-ftm-link hover:text-ftm-ink underline underline-offset-4 transition-colors"
+                              >
+                                Stats
+                              </button>
+                              <button
+                                onClick={() => duplicateTest(test.test_id)}
+                                className="font-inter font-semibold text-[12px] text-ftm-link hover:text-ftm-ink underline underline-offset-4 transition-colors disabled:opacity-50"
+                                disabled={duplicating}
+                              >
+                                {duplicating ? 'Copying' : 'Duplicate'}
+                              </button>
+                              {/* Delete is not permanently red. The confirm
+                                  dialog carries the weight; a row of four
+                                  coloured links carries none. */}
+                              <button
+                                onClick={() => deleteTest(test.test_id)}
+                                className="font-inter font-semibold text-[12px] text-ftm-dim hover:text-ftm-ochre underline underline-offset-4 transition-colors"
+                              >
+                                Delete
+                              </button>
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
-              </div>
+              </section>
             );
           })}
+
           {Object.keys(tests).length === 0 && (
-            <div className="text-center py-12 bg-ftm-card border border-white/[.08] rounded-lg">
-              <p className="text-ftm-dim">No tests created yet.</p>
+            <div className="border-t border-ftm-line2 pt-6 max-w-measure">
+              <h2 className="font-grotesk font-bold text-[19px] text-ftm-ink mb-2">No tests yet</h2>
+              <p className="font-inter text-[15px] leading-relaxed text-ftm-mut mb-6">
+                Create a reading, writing or listening test and assign it to a sitting. Candidates
+                only see a section once a test exists for their date.
+              </p>
+              <button
+                onClick={() => router.push('/admin/create-test')}
+                className="font-inter font-bold text-[15px] text-white bg-ftm-crimson hover:bg-ftm-crimsondeep px-6 py-3 transition-colors"
+              >
+                Create the first test
+              </button>
             </div>
           )}
         </div>

@@ -49,7 +49,7 @@ export default function TestStats() {
   if (!test || !stats) return <div>Test not found</div>;
 
   return (
-    <div className="min-h-screen bg-ftm-night py-12 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-ftm-night">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="flex justify-between items-center mb-8">
@@ -64,7 +64,7 @@ export default function TestStats() {
             <select 
               value={timeRange}
               onChange={(e) => filterStats(e.target.value)}
-              className="rounded-md border-white/[.16] shadow-sm"
+              className="bg-ftm-night border-2 border-ftm-line2 focus:border-ftm-ink px-3 py-2 font-inter text-[14px] text-ftm-ink transition-colors"
             >
               <option value="all">All Time</option>
               <option value="week">Past Week</option>
@@ -101,7 +101,7 @@ export default function TestStats() {
         </div>
 
         {/* Score Distribution */}
-        <div className="bg-ftm-card shadow rounded-lg p-6 mb-8">
+        <div className="border-t-2 border-ftm-line2 pt-6 mb-8">
           <h3 className="text-lg font-medium text-ftm-ink mb-6">Score Distribution</h3>
           <div className="space-y-4">
             {[
@@ -122,7 +122,7 @@ export default function TestStats() {
 
         {/* Question Analysis */}
         {test.type !== 'writing' && (
-          <div className="bg-ftm-card shadow rounded-lg p-6">
+          <div className="border-t-2 border-ftm-line2 pt-6">
             <h3 className="text-lg font-medium text-ftm-ink mb-6">
               Question Performance
             </h3>

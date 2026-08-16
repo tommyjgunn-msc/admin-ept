@@ -4,16 +4,33 @@
 @tailwind utilities;
 
 @layer base {
+  html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
   body {
     @apply bg-ftm-night text-ftm-ink font-inter;
   }
 
   h1, h2, h3, h4 {
     @apply font-grotesk;
+    text-wrap: balance;
   }
 
+  /* This console is almost entirely figures — scores out of 50, candidate
+     counts, points, timestamps. Proportional numerals make a column of them
+     impossible to compare by eye, so every table sets tabular figures. */
+  table, time, output, [data-figure] {
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* GOV.UK-style focus: a thick ochre outline visible on both grounds, offset
+     so it never sits on the control's own border. */
   *:focus-visible {
-    @apply outline-none ring-2 ring-ftm-red ring-offset-2 ring-offset-ftm-night;
+    outline: 3px solid theme("colors.ftm.ochre");
+    outline-offset: 2px;
+    border-radius: 0;
   }
 
   /* Form controls. The browser default is a white control background while the
@@ -22,10 +39,120 @@
      here once so no individual field can regress. color-scheme also makes
      native pickers (date, select dropdowns) render dark. */
   input, textarea, select {
-    @apply bg-ftm-night text-ftm-ink;
+    @apply bg-ftm-night text-ftm-ink border-ftm-line;
     color-scheme: dark;
   }
   input::placeholder, textarea::placeholder {
     @apply text-ftm-dim;
+  }
+}
+
+@layer components {
+  /* ── Imigongo register ──────────────────────────────────────────────────
+     The one ornament in the system: a row of crimson diamonds on an ink field,
+     after the Rwandan relief-painting tradition of Gisaka in the Eastern
+     Province, where the motifs are diamonds and zigzags and the ground is
+     black. Two colours, not four — an earlier four-colour version turned to
+     visual noise below about 20px and the ochre vanished against paper.
+
+     It marks the top edge of a page and nothing else. Never a background fill. */
+  .ftm-register {
+    /* Default ground is paper, because the default page is the dark one — the
+       band has to contrast with the page or it reads as fringe rather than a
+       deliberate rule. `.ftm-register-paper` inverts it for the light pages. */
+    --reg-figure: theme("colors.ftm.crimson");
+    --reg-ground: theme("colors.ftm.paper");
+    --reg-tile: 20px;
+    height: 10px;
+    background-color: var(--reg-ground);
+    background-image:
+      linear-gradient(45deg,  var(--reg-figure) 25%, transparent 25%),
+      linear-gradient(-45deg, var(--reg-figure) 25%, transparent 25%),
+      linear-gradient(45deg,  transparent 75%, var(--reg-figure) 75%),
+      linear-gradient(-45deg, transparent 75%, var(--reg-figure) 75%);
+    background-size: var(--reg-tile) var(--reg-tile);
+  }
+  .ftm-register-paper {
+    --reg-ground: #14181B;
+  }
+  .ftm-register-tall {
+    --reg-tile: 28px;
+    height: 14px;
+  }
+
+  /* ── Data table ─────────────────────────────────────────────────────────
+     Hairline rules, no container box, figures right-aligned. After Tufte's
+     data-ink test and newspaper table setting.
+
+     `border-collapse: separate` is not cosmetic: a collapsed table drops the
+     borders on `position: sticky` cells and mispositions them, which is what
+     broke the header row. Stickiness is opt-in via `.ftm-table-sticky`, for
+     the long tables only — a five-row table does not need a floating header. */
+  .ftm-table {
+    @apply w-full font-inter text-[13px];
+    border-collapse: separate;
+    border-spacing: 0;
+  }
+  .ftm-table thead th {
+    @apply text-left font-semibold text-[10px] tracking-[.14em] uppercase text-ftm-dim
+           py-2 pr-6 border-b border-ftm-line2 whitespace-nowrap align-bottom;
+  }
+  .ftm-table tbody th,
+  .ftm-table tbody td {
+    @apply py-2.5 pr-6 border-b border-ftm-line align-top text-ftm-ink;
+  }
+  .ftm-table tbody tr:hover th,
+  .ftm-table tbody tr:hover td {
+    @apply bg-ftm-card;
+  }
+  .ftm-table thead th:last-child,
+  .ftm-table tbody th:last-child,
+  .ftm-table tbody td:last-child {
+    @apply pr-0;
+  }
+  .ftm-table .num,
+  .ftm-table thead th.num {
+    @apply text-right;
+    font-variant-numeric: tabular-nums;
+  }
+  /* `.ftm-table thead th` is more specific than a bare `.text-right` utility,
+     so a right-aligned non-numeric header needs its own hook or the heading
+     drifts left of the column it labels. */
+  .ftm-table .end,
+  .ftm-table thead th.end {
+    @apply text-right;
+  }
+
+  .ftm-table-sticky thead th {
+    @apply sticky top-bar z-10 bg-ftm-night;
+  }
+
+  /* ── Status ─────────────────────────────────────────────────────────────
+     Never colour alone: a square swatch plus the word. Square, not a pill. */
+  .ftm-status {
+    @apply inline-flex items-center gap-2 font-inter text-[12px];
+  }
+  .ftm-status::before {
+    content: "";
+    @apply inline-block w-2 h-2 flex-none;
+    background: currentColor;
+  }
+}
+
+@keyframes ftmFade {
+  0%, 100% { opacity: .5; }
+  50% { opacity: .9; }
+}
+.ftm-skeleton {
+  @apply bg-ftm-up;
+  animation: ftmFade 1.6s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }

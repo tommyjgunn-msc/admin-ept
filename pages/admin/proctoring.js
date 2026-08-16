@@ -76,138 +76,149 @@ export default function ProctoringReport() {
     }))
     .sort((a, b) => (b.flagged - a.flagged) || (b.totalWarnings - a.totalWarnings));
 
-  const card = 'p-4 rounded-lg bg-ftm-bar border border-white/[.08]';
-  const chip = (tone) =>
-    `font-inter text-[11px] px-2 py-0.5 rounded ${
-      tone === 'red' ? 'text-ftm-red bg-ftm-red/[.10]'
-      : tone === 'amber' ? 'text-ftm-amber bg-ftm-amber/[.10]'
-      : tone === 'green' ? 'text-ftm-green bg-ftm-green/[.10]'
-      : 'text-ftm-dim bg-white/[.06]'
+  // Signal labels. These used to be tinted rounded chips in four colours,
+  // which meant a page about evidence read as a page about colour. They are
+  // now plain text with a square swatch where a signal is actually amber —
+  // and nothing here is red, because none of these findings is a conclusion.
+  const signal = (tone) =>
+    `font-inter text-[12px] ${
+      tone === 'amber' ? 'ftm-status font-semibold text-ftm-ochre'
+      : tone === 'green' ? 'ftm-status text-ftm-green'
+      : 'text-ftm-mut'
     }`;
 
   return (
     <AdminShell>
-      <div className="max-w-5xl mx-auto">
-        <div className="mb-6">
-          <h1 className="font-grotesk text-xl text-ftm-ink">Proctoring report</h1>
-          <p className="font-inter text-[13px] text-ftm-mut mt-1">
+      <div className="max-w-shell">
+        <div className="mb-8">
+          <h1 className="font-grotesk font-bold text-[26px] text-ftm-ink">Proctoring</h1>
+          <p className="font-inter text-[14px] text-ftm-mut mt-1 max-w-measure">
             {report?.date
-              ? <>Most recent sitting: <span className="text-ftm-slate">{toDisplayDate(report.date)}</span>. Earlier sittings remain in the sheet.</>
+              ? <>Most recent sitting: <span className="text-ftm-ink font-semibold">{toDisplayDate(report.date)}</span>. Earlier sittings remain in the sheet.</>
               : 'Signals collected during the most recent sitting.'}
           </p>
         </div>
 
+        {/* Stated once, at the top, where it changes how the page is read —
+            rather than as a footnote under 200 rows of findings. */}
+        <div className="border-l-[6px] border-ftm-ochre pl-4 py-1 mb-10 max-w-measure">
+          <p className="font-inter text-[14px] leading-relaxed text-ftm-mut">
+            Everything below is a prompt to ask a candidate a question. None of it is proof of
+            anything on its own.
+          </p>
+        </div>
+
         {error && (
-          <div className="mb-4 px-3 py-2 rounded border border-ftm-red/40 bg-ftm-red/[.08] font-inter text-[13px] text-ftm-red">
-            {error}
+          <div role="alert" className="border-l-[6px] border-ftm-crimson bg-ftm-card px-5 py-4 mb-6">
+            <h2 className="font-grotesk font-bold text-[15px] text-ftm-ochre mb-1">There is a problem</h2>
+            <p className="font-inter text-[14px] text-ftm-ink">{error}</p>
           </div>
         )}
 
         {loading ? (
-          <p className="font-inter text-[13px] text-ftm-dim">Loading…</p>
+          <div aria-busy="true">
+            <div className="ftm-skeleton h-6 w-48 mb-6" />
+            {[0, 1, 2, 3].map((i) => (
+              <div key={i} className="py-4 border-b border-ftm-line">
+                <div className="ftm-skeleton h-4 w-40 mb-2" />
+                <div className="ftm-skeleton h-3 w-72" />
+              </div>
+            ))}
+          </div>
         ) : !summary ? (
-          <div className={`${card} text-center`}>
-            <p className="font-inter text-[13px] text-ftm-mut">No submissions with proctoring data yet.</p>
+          <div className="border-t border-ftm-line2 pt-6 max-w-measure">
+            <h2 className="font-grotesk font-bold text-[19px] text-ftm-ink mb-2">Nothing recorded yet</h2>
+            <p className="font-inter text-[15px] leading-relaxed text-ftm-mut">
+              Proctoring signals appear here after the first sitting where a candidate submits a
+              section.
+            </p>
           </div>
         ) : (
           <>
-            {/* Summary cards */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
-              <div className={card}>
-                <p className="font-grotesk text-2xl text-ftm-ink">{summary.students}</p>
-                <p className="font-inter text-[11px] uppercase tracking-wide text-ftm-dim mt-1">
-                  students · {summary.total} submissions
-                </p>
-              </div>
-              <div className={card}>
-                <p className={`font-grotesk text-2xl ${summary.flagged ? 'text-ftm-red' : 'text-ftm-green'}`}>
-                  {summary.flagged}
-                </p>
-                <p className="font-inter text-[11px] uppercase tracking-wide text-ftm-dim mt-1">
-                  flagged submissions
-                </p>
-              </div>
-              <div className={card}>
-                <p className={`font-grotesk text-2xl ${summary.forcedSubmits ? 'text-ftm-amber' : 'text-ftm-ink'}`}>
-                  {summary.forcedSubmits}
-                </p>
-                <p className="font-inter text-[11px] uppercase tracking-wide text-ftm-dim mt-1">
-                  forced submissions
-                </p>
-              </div>
-              <div className={card}>
-                <p className="font-grotesk text-2xl text-ftm-ink">
-                  {summary.totals.fullscreen + summary.totals.windowFocus + summary.totals.copyPaste}
-                </p>
-                <p className="font-inter text-[11px] uppercase tracking-wide text-ftm-dim mt-1">
-                  total violations
-                </p>
-              </div>
-            </div>
-
-            {/* Violation breakdown bars */}
-            <div className={`${card} mb-6`}>
+            {/* Headline figures, as a ruled strip. Was four bordered cards. */}
+            <div className="flex flex-wrap gap-y-4 border-t-2 border-ftm-line2 pt-5 pb-5 border-b border-ftm-line mb-10">
               {[
-                ['Fullscreen exits', summary.totals.fullscreen],
-                ['Tab switches', summary.totals.windowFocus],
-                ['Copy/paste attempts', summary.totals.copyPaste],
-                ['Multi-monitor flags', summary.totals.multipleMonitors],
-              ].map(([label, count]) => {
-                const max = Math.max(
-                  summary.totals.fullscreen, summary.totals.windowFocus,
-                  summary.totals.copyPaste, summary.totals.multipleMonitors, 1
-                );
-                return (
-                  <div key={label} className="flex items-center gap-3 py-1">
-                    <span className="font-inter text-[12px] text-ftm-mut w-40 shrink-0">{label}</span>
-                    <div className="flex-1 h-2 rounded bg-white/[.05] overflow-hidden">
-                      <div
-                        className="h-full rounded bg-ftm-red/70"
-                        style={{ width: `${(count / max) * 100}%` }}
-                      />
-                    </div>
-                    <span className="font-inter text-[12px] text-ftm-slate w-8 text-right">{count}</span>
-                  </div>
-                );
-              })}
+                { label: 'Candidates', value: summary.students, tone: 'text-ftm-ink' },
+                { label: 'Submissions', value: summary.total, tone: 'text-ftm-ink' },
+                { label: 'Flagged', value: summary.flagged, tone: summary.flagged ? 'text-ftm-ochre' : 'text-ftm-green' },
+                { label: 'Forced submits', value: summary.forcedSubmits, tone: summary.forcedSubmits ? 'text-ftm-ochre' : 'text-ftm-ink' },
+                {
+                  label: 'Events',
+                  value: summary.totals.fullscreen + summary.totals.windowFocus + summary.totals.copyPaste,
+                  tone: 'text-ftm-ink',
+                },
+              ].map(({ label, value, tone }) => (
+                <div key={label} className="pr-10">
+                  <div className={`font-grotesk font-bold text-[26px] tabular-nums leading-none ${tone}`}>{value}</div>
+                  <div className="font-inter text-[11px] tracking-[.1em] uppercase text-ftm-dim mt-1.5">{label}</div>
+                </div>
+              ))}
             </div>
 
-            {/* Per-student rows */}
-            <div className="rounded-lg bg-ftm-bar border border-white/[.08] overflow-hidden mb-4">
+            {/* Event breakdown. The bars were scaled to the largest category,
+                so a category with 3 events and one with 4 looked nearly equal
+                — the bar carried less information than the number beside it.
+                It is a plain ranked table now. */}
+            <h2 className="font-grotesk font-bold text-[17px] text-ftm-ink mb-3">Events by kind</h2>
+            <table className="ftm-table max-w-[420px] mb-12">
+              <thead>
+                <tr>
+                  <th scope="col">Event</th>
+                  <th scope="col" className="num">Count</th>
+                </tr>
+              </thead>
+              <tbody>
+                {[
+                  ['Fullscreen exits', summary.totals.fullscreen],
+                  ['Tab switches', summary.totals.windowFocus],
+                  ['Copy or paste attempts', summary.totals.copyPaste],
+                  ['Second-screen guesses', summary.totals.multipleMonitors],
+                ]
+                  .sort((a, b) => b[1] - a[1])
+                  .map(([label, count]) => (
+                    <tr key={label}>
+                      <th scope="row" className="text-left font-normal text-ftm-mut">{label}</th>
+                      <td className="num font-semibold">{count}</td>
+                    </tr>
+                  ))}
+              </tbody>
+            </table>
+
+            {/* Per-candidate. Flagged first, then by event count. */}
+            <h2 className="font-grotesk font-bold text-[17px] text-ftm-ink mb-3">By candidate</h2>
+            <div className="border-t-2 border-ftm-line2 mb-8">
               {students.map(({ studentId, sections, flagged }) => (
-                <div key={studentId} className="px-4 py-3 border-b border-white/[.06] last:border-b-0">
-                  <div className="flex items-center gap-3 mb-1.5">
-                    <p className="font-inter text-[14px] text-ftm-ink">{studentId}</p>
-                    <span className={chip(flagged ? 'red' : 'green')}>
+                <div key={studentId} className="py-4 border-b border-ftm-line">
+                  <div className="flex items-baseline gap-4 mb-2">
+                    <p className="font-inter font-semibold text-[14px] text-ftm-ink tabular-nums">{studentId}</p>
+                    <span className={`ftm-status font-semibold ${flagged ? 'text-ftm-ochre' : 'text-ftm-green'}`}>
                       {flagged ? 'flagged' : 'clean'}
                     </span>
                   </div>
-                  <div className="space-y-1">
+                  <div className="space-y-1.5">
                     {sections.map(sub => (
-                      <div key={sub.test_id} className="flex items-center gap-2 flex-wrap">
-                        <span className="font-inter text-[12px] text-ftm-mut w-16 capitalize shrink-0">
+                      <div key={sub.test_id} className="flex items-baseline gap-x-5 gap-y-1 flex-wrap">
+                        <span className="font-inter text-[12px] font-semibold text-ftm-mut w-20 capitalize shrink-0">
                           {sub.section}
                         </span>
                         {!sub.hasData ? (
-                          <span className={chip()}>no proctoring data</span>
+                          <span className="font-inter text-[12px] text-ftm-dim">no data recorded</span>
                         ) : sub.reasons.length === 0 ? (
-                          <span className={chip('green')}>no violations</span>
+                          <span className={signal('green')}>nothing recorded</span>
                         ) : (
                           sub.reasons.map(reason => (
-                            <span key={reason} className={chip(reason.includes('heuristic') ? 'amber' : 'red')}>
-                              {reason}
-                            </span>
+                            <span key={reason} className={signal('amber')}>{reason}</span>
                           ))
                         )}
                         {sub.totalAwaySeconds > 0 && (
-                          <span className={chip('amber')}>
+                          <span className={signal('amber')}>
                             away {formatSeconds(sub.totalAwaySeconds)}
-                            {sub.longestAwaySeconds > 0 && ` (longest ${formatSeconds(sub.longestAwaySeconds)})`}
+                            {sub.longestAwaySeconds > 0 && `, longest ${formatSeconds(sub.longestAwaySeconds)}`}
                           </span>
                         )}
                         {sub.hasTyping && (
-                          <span className={chip(sub.peakWpm >= 150 ? 'red' : sub.peakWpm >= 90 ? 'amber' : '')}>
-                            {sub.typedWords} words typed
+                          <span className={signal(sub.peakWpm >= 90 ? 'amber' : '')}>
+                            {sub.typedWords} words
                             {sub.peakWpm > 0 && `, peak ${sub.peakWpm} wpm`}
                             {sub.peakBurst && sub.peakWpm >= 90 &&
                               ` (${sub.peakBurst.words} words in ${sub.peakBurst.seconds}s)`}
@@ -220,13 +231,34 @@ export default function ProctoringReport() {
               ))}
             </div>
 
-            <p className="font-inter text-[11px] text-ftm-dim">
-              The multi-monitor signal is a screen-size heuristic and can misfire on large
-              single monitors or non-maximised windows — treat it as a prompt to ask, not proof.
-              A single copy/paste attempt flags a submission; tab switches flag from the second one.
-              Typing pace: ESL exam typing usually sits around 15–40 wpm — a sustained
-              triple-digit peak suggests dictation or externally drafted text, not proof of it.
-            </p>
+            <div className="border-t border-ftm-line pt-5 max-w-measure">
+              <h2 className="font-inter font-bold text-[11px] tracking-[.14em] uppercase text-ftm-dim mb-3">
+                How to read these signals
+              </h2>
+              <dl className="ftm-facts">
+                <div>
+                  <dt className="k">Second-screen guess</dt>
+                  <dd className="v text-left max-w-[440px] font-normal text-ftm-mut">
+                    A screen-size heuristic. It misfires on large single monitors and on windows
+                    that are not maximised.
+                  </dd>
+                </div>
+                <div>
+                  <dt className="k">Copy or paste</dt>
+                  <dd className="v text-left max-w-[440px] font-normal text-ftm-mut">
+                    One attempt flags a submission. Tab switches flag from the second.
+                  </dd>
+                </div>
+                <div>
+                  <dt className="k">Typing pace</dt>
+                  <dd className="v text-left max-w-[440px] font-normal text-ftm-mut">
+                    Exam typing in a second language usually sits around 15 to 40 wpm. A sustained
+                    triple-digit peak suggests dictation or text drafted elsewhere. It does not
+                    establish it.
+                  </dd>
+                </div>
+              </dl>
+            </div>
           </>
         )}
       </div>
