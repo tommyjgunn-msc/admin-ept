@@ -49,37 +49,37 @@ const ReadingTestForm = ({ onSubmit, isLoading }) => {
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       {/* Add metadata section first */}
-      <div className="bg-ftm-card shadow rounded-lg p-6 space-y-4">
+      <div className="border-t-2 border-ftm-line2 pt-6 space-y-5">
         <h3 className="text-lg font-medium">Test Details</h3>
         <div className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-ftm-slate">Test Title</label>
+            <label className="block font-inter font-bold text-[13px] text-ftm-ink mb-1.5">Test Title</label>
             <input
               type="text"
               value={testMetadata.title}
               onChange={(e) => setTestMetadata({...testMetadata, title: e.target.value})}
-              className="mt-1 block w-full border border-white/[.16] rounded-md shadow-sm p-2"
+              className="mt-1 block w-full bg-ftm-night border-2 border-ftm-line2 focus:border-ftm-ink px-3 py-2 font-inter text-[14px] text-ftm-ink transition-colors"
               required
             />
           </div>
           
           <div>
-            <label className="block text-sm font-medium text-ftm-slate">Test Date</label>
+            <label className="block font-inter font-bold text-[13px] text-ftm-ink mb-1.5">Test Date</label>
             <input
               type="date"
               value={testMetadata.test_date}
               onChange={(e) => setTestMetadata({...testMetadata, test_date: e.target.value})}
-              className="mt-1 block w-full border border-white/[.16] rounded-md shadow-sm p-2"
+              className="mt-1 block w-full bg-ftm-night border-2 border-ftm-line2 focus:border-ftm-ink px-3 py-2 font-inter text-[14px] text-ftm-ink transition-colors"
               required
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-ftm-slate">Description (Optional)</label>
+            <label className="block font-inter font-bold text-[13px] text-ftm-ink mb-1.5">Description (Optional)</label>
             <textarea
               value={testMetadata.description}
               onChange={(e) => setTestMetadata({...testMetadata, description: e.target.value})}
-              className="mt-1 block w-full border border-white/[.16] rounded-md shadow-sm p-2"
+              className="mt-1 block w-full bg-ftm-night border-2 border-ftm-line2 focus:border-ftm-ink px-3 py-2 font-inter text-[14px] text-ftm-ink transition-colors"
               rows={3}
             />
           </div>
@@ -88,11 +88,11 @@ const ReadingTestForm = ({ onSubmit, isLoading }) => {
 
       {/* Your existing sections mapping */}
       {sections.map((section, sectionIndex) => (
-        <div key={sectionIndex} className="bg-ftm-card shadow rounded-lg p-6 space-y-4">
+        <div key={sectionIndex} className="border-t-2 border-ftm-line2 pt-6 space-y-5">
           <h3 className="text-lg font-medium">Reading Section {sectionIndex + 1}</h3>
           
           <div>
-            <label className="block text-sm font-medium text-ftm-slate">Section Title</label>
+            <label className="block font-inter font-bold text-[13px] text-ftm-ink mb-1.5">Section Title</label>
             <input
               type="text"
               value={section.title}
@@ -101,13 +101,13 @@ const ReadingTestForm = ({ onSubmit, isLoading }) => {
                 newSections[sectionIndex].title = e.target.value;
                 setSections(newSections);
               }}
-              className="mt-1 block w-full border border-white/[.16] rounded-md shadow-sm p-2"
+              className="mt-1 block w-full bg-ftm-night border-2 border-ftm-line2 focus:border-ftm-ink px-3 py-2 font-inter text-[14px] text-ftm-ink transition-colors"
               required
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-ftm-slate">Reading Passage</label>
+            <label className="block font-inter font-bold text-[13px] text-ftm-ink mb-1.5">Reading Passage</label>
             <textarea
               value={section.content}
               onChange={(e) => {
@@ -116,14 +116,14 @@ const ReadingTestForm = ({ onSubmit, isLoading }) => {
                 setSections(newSections);
               }}
               rows={6}
-              className="mt-1 block w-full border border-white/[.16] rounded-md shadow-sm p-2"
+              className="mt-1 block w-full bg-ftm-night border-2 border-ftm-line2 focus:border-ftm-ink px-3 py-2 font-inter text-[14px] text-ftm-ink transition-colors"
               required
             />
           </div>
 
           <div className="space-y-4">
             {section.questions.map((question, questionIndex) => (
-              <div key={questionIndex} className="border border-white/[.08] rounded-md p-4">
+              <div key={questionIndex} className="border-t border-ftm-line pt-5">
                 <h4 className="text-sm font-medium mb-2">Question {questionIndex + 1}</h4>
                 
                 <div className="space-y-2">
@@ -136,7 +136,7 @@ const ReadingTestForm = ({ onSubmit, isLoading }) => {
                       newSections[sectionIndex].questions[questionIndex].text = e.target.value;
                       setSections(newSections);
                     }}
-                    className="block w-full border border-white/[.16] rounded-md shadow-sm p-2"
+                    className="block w-full bg-ftm-night border-2 border-ftm-line2 focus:border-ftm-ink px-3 py-2 font-inter text-[14px] text-ftm-ink transition-colors"
                     required
                   />
 
@@ -151,7 +151,7 @@ const ReadingTestForm = ({ onSubmit, isLoading }) => {
                           newSections[sectionIndex].questions[questionIndex].options[optionIndex] = e.target.value;
                           setSections(newSections);
                         }}
-                        className="block w-full border border-white/[.16] rounded-md shadow-sm p-2"
+                        className="block w-full bg-ftm-night border-2 border-ftm-line2 focus:border-ftm-ink px-3 py-2 font-inter text-[14px] text-ftm-ink transition-colors"
                         required
                       />
                       <input
@@ -179,7 +179,7 @@ const ReadingTestForm = ({ onSubmit, isLoading }) => {
                         newSections[sectionIndex].questions[questionIndex].points = parseInt(e.target.value);
                         setSections(newSections);
                       }}
-                      className="w-20 border border-white/[.16] rounded-md shadow-sm p-2"
+                      className="w-20 bg-ftm-night border-2 border-ftm-line2 focus:border-ftm-ink px-3 py-2 font-inter text-[14px] text-ftm-ink tabular-nums transition-colors"
                       required
                     />
                   </div>
@@ -190,7 +190,7 @@ const ReadingTestForm = ({ onSubmit, isLoading }) => {
             <button
               type="button"
               onClick={() => addQuestion(sectionIndex)}
-              className="mt-2 px-4 py-2 border border-white/[.16] rounded-md shadow-sm text-sm font-medium text-ftm-slate hover:bg-ftm-up"
+              className="mt-3 px-4 py-2.5 border border-ftm-line2 font-inter font-semibold text-[14px] text-ftm-ink hover:bg-ftm-up transition-colors"
             >
               Add Question
             </button>
@@ -202,7 +202,7 @@ const ReadingTestForm = ({ onSubmit, isLoading }) => {
         <button
           type="button"
           onClick={addSection}
-          className="px-4 py-2 border border-white/[.16] rounded-md shadow-sm text-sm font-medium text-ftm-slate hover:bg-ftm-up"
+          className="px-4 py-2.5 border border-ftm-line2 font-inter font-semibold text-[14px] text-ftm-ink hover:bg-ftm-up transition-colors"
         >
           Add Section
         </button>
@@ -210,7 +210,7 @@ const ReadingTestForm = ({ onSubmit, isLoading }) => {
         <button
           type="submit"
           disabled={isLoading}
-          className={`px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-ftm-red hover:bg-[#C51F35] ${
+          className={`px-5 py-2.5 font-inter font-bold text-[14px] text-white bg-ftm-crimson hover:bg-ftm-crimsondeep transition-colors ${
             isLoading ? 'opacity-50 cursor-not-allowed' : ''
           }`}
         >
@@ -272,37 +272,37 @@ const ListeningTestForm = ({ onSubmit, isLoading }) => {
     return (
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Test Metadata Section */}
-        <div className="bg-ftm-card shadow rounded-lg p-6 space-y-4">
+        <div className="border-t-2 border-ftm-line2 pt-6 space-y-5">
           <h3 className="text-lg font-medium">Test Details</h3>
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-ftm-slate">Test Title</label>
+              <label className="block font-inter font-bold text-[13px] text-ftm-ink mb-1.5">Test Title</label>
               <input
                 type="text"
                 value={testMetadata.title}
                 onChange={(e) => setTestMetadata({...testMetadata, title: e.target.value})}
-                className="mt-1 block w-full border border-white/[.16] rounded-md shadow-sm p-2"
+                className="mt-1 block w-full bg-ftm-night border-2 border-ftm-line2 focus:border-ftm-ink px-3 py-2 font-inter text-[14px] text-ftm-ink transition-colors"
                 required
               />
             </div>
             
             <div>
-              <label className="block text-sm font-medium text-ftm-slate">Test Date</label>
+              <label className="block font-inter font-bold text-[13px] text-ftm-ink mb-1.5">Test Date</label>
               <input
                 type="date"
                 value={testMetadata.test_date}
                 onChange={(e) => setTestMetadata({...testMetadata, test_date: e.target.value})}
-                className="mt-1 block w-full border border-white/[.16] rounded-md shadow-sm p-2"
+                className="mt-1 block w-full bg-ftm-night border-2 border-ftm-line2 focus:border-ftm-ink px-3 py-2 font-inter text-[14px] text-ftm-ink transition-colors"
                 required
               />
             </div>
   
             <div>
-              <label className="block text-sm font-medium text-ftm-slate">Description (Optional)</label>
+              <label className="block font-inter font-bold text-[13px] text-ftm-ink mb-1.5">Description (Optional)</label>
               <textarea
                 value={testMetadata.description}
                 onChange={(e) => setTestMetadata({...testMetadata, description: e.target.value})}
-                className="mt-1 block w-full border border-white/[.16] rounded-md shadow-sm p-2"
+                className="mt-1 block w-full bg-ftm-night border-2 border-ftm-line2 focus:border-ftm-ink px-3 py-2 font-inter text-[14px] text-ftm-ink transition-colors"
                 rows={3}
               />
             </div>
@@ -311,12 +311,12 @@ const ListeningTestForm = ({ onSubmit, isLoading }) => {
   
         {/* Questions Section */}
         {sections.map((section, sectionIndex) => (
-          <div key={sectionIndex} className="bg-ftm-card shadow rounded-lg p-6 space-y-4">
+          <div key={sectionIndex} className="border-t-2 border-ftm-line2 pt-6 space-y-5">
             <h3 className="text-lg font-medium">{section.title}</h3>
             
             <div className="space-y-4">
               {section.questions.map((question, questionIndex) => (
-                <div key={questionIndex} className="border border-white/[.08] rounded-md p-4">
+                <div key={questionIndex} className="border-t border-ftm-line pt-5">
                   <h4 className="text-sm font-medium mb-2">Question {questionIndex + 1}</h4>
                   
                   <div className="space-y-2">
@@ -329,7 +329,7 @@ const ListeningTestForm = ({ onSubmit, isLoading }) => {
                         newSections[sectionIndex].questions[questionIndex].text = e.target.value;
                         setSections(newSections);
                       }}
-                      className="block w-full border border-white/[.16] rounded-md shadow-sm p-2"
+                      className="block w-full bg-ftm-night border-2 border-ftm-line2 focus:border-ftm-ink px-3 py-2 font-inter text-[14px] text-ftm-ink transition-colors"
                       required
                     />
   
@@ -344,7 +344,7 @@ const ListeningTestForm = ({ onSubmit, isLoading }) => {
                             newSections[sectionIndex].questions[questionIndex].options[optionIndex] = e.target.value;
                             setSections(newSections);
                           }}
-                          className="block w-full border border-white/[.16] rounded-md shadow-sm p-2"
+                          className="block w-full bg-ftm-night border-2 border-ftm-line2 focus:border-ftm-ink px-3 py-2 font-inter text-[14px] text-ftm-ink transition-colors"
                           required
                         />
                         <input
@@ -372,7 +372,7 @@ const ListeningTestForm = ({ onSubmit, isLoading }) => {
                           newSections[sectionIndex].questions[questionIndex].points = parseInt(e.target.value);
                           setSections(newSections);
                         }}
-                        className="w-20 border border-white/[.16] rounded-md shadow-sm p-2"
+                        className="w-20 bg-ftm-night border-2 border-ftm-line2 focus:border-ftm-ink px-3 py-2 font-inter text-[14px] text-ftm-ink tabular-nums transition-colors"
                         required
                       />
                     </div>
@@ -383,7 +383,7 @@ const ListeningTestForm = ({ onSubmit, isLoading }) => {
               <button
                 type="button"
                 onClick={() => addQuestion(sectionIndex)}
-                className="mt-2 px-4 py-2 border border-white/[.16] rounded-md shadow-sm text-sm font-medium text-ftm-slate hover:bg-ftm-up"
+                className="mt-3 px-4 py-2.5 border border-ftm-line2 font-inter font-semibold text-[14px] text-ftm-ink hover:bg-ftm-up transition-colors"
               >
                 Add Question
               </button>
@@ -395,7 +395,7 @@ const ListeningTestForm = ({ onSubmit, isLoading }) => {
           <button
             type="button"
             onClick={addSection}
-            className="px-4 py-2 border border-white/[.16] rounded-md shadow-sm text-sm font-medium text-ftm-slate hover:bg-ftm-up"
+            className="px-4 py-2.5 border border-ftm-line2 font-inter font-semibold text-[14px] text-ftm-ink hover:bg-ftm-up transition-colors"
           >
             Add Recording Section
           </button>
@@ -403,7 +403,7 @@ const ListeningTestForm = ({ onSubmit, isLoading }) => {
           <button
             type="submit"
             disabled={isLoading}
-            className={`px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-ftm-red hover:bg-[#C51F35] ${
+            className={`px-5 py-2.5 font-inter font-bold text-[14px] text-white bg-ftm-crimson hover:bg-ftm-crimsondeep transition-colors ${
               isLoading ? 'opacity-50 cursor-not-allowed' : ''
             }`}
           >
@@ -466,37 +466,37 @@ const WritingTestForm = ({ onSubmit, isLoading }) => {
     return (
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Test Metadata Section */}
-        <div className="bg-ftm-card shadow rounded-lg p-6 space-y-4">
+        <div className="border-t-2 border-ftm-line2 pt-6 space-y-5">
           <h3 className="text-lg font-medium">Test Details</h3>
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-ftm-slate">Test Title</label>
+              <label className="block font-inter font-bold text-[13px] text-ftm-ink mb-1.5">Test Title</label>
               <input
                 type="text"
                 value={testMetadata.title}
                 onChange={(e) => setTestMetadata({...testMetadata, title: e.target.value})}
-                className="mt-1 block w-full border border-white/[.16] rounded-md shadow-sm p-2"
+                className="mt-1 block w-full bg-ftm-night border-2 border-ftm-line2 focus:border-ftm-ink px-3 py-2 font-inter text-[14px] text-ftm-ink transition-colors"
                 required
               />
             </div>
             
             <div>
-              <label className="block text-sm font-medium text-ftm-slate">Test Date</label>
+              <label className="block font-inter font-bold text-[13px] text-ftm-ink mb-1.5">Test Date</label>
               <input
                 type="date"
                 value={testMetadata.test_date}
                 onChange={(e) => setTestMetadata({...testMetadata, test_date: e.target.value})}
-                className="mt-1 block w-full border border-white/[.16] rounded-md shadow-sm p-2"
+                className="mt-1 block w-full bg-ftm-night border-2 border-ftm-line2 focus:border-ftm-ink px-3 py-2 font-inter text-[14px] text-ftm-ink transition-colors"
                 required
               />
             </div>
   
             <div>
-              <label className="block text-sm font-medium text-ftm-slate">Description (Optional)</label>
+              <label className="block font-inter font-bold text-[13px] text-ftm-ink mb-1.5">Description (Optional)</label>
               <textarea
                 value={testMetadata.description}
                 onChange={(e) => setTestMetadata({...testMetadata, description: e.target.value})}
-                className="mt-1 block w-full border border-white/[.16] rounded-md shadow-sm p-2"
+                className="mt-1 block w-full bg-ftm-night border-2 border-ftm-line2 focus:border-ftm-ink px-3 py-2 font-inter text-[14px] text-ftm-ink transition-colors"
                 rows={3}
               />
             </div>
@@ -504,10 +504,10 @@ const WritingTestForm = ({ onSubmit, isLoading }) => {
         </div>
   
         {/* AI drafting */}
-        <div className="bg-ftm-card shadow rounded-lg p-6 space-y-3">
+        <div className="border-t-2 border-ftm-line2 pt-6 space-y-3">
           <div className="flex items-center justify-between">
             <h3 className="text-lg font-medium">Generate prompts with AI</h3>
-            <span className="text-xs text-ftm-dim">drafts all three types — edit before saving</span>
+            <span className="text-xs text-ftm-dim">drafts all three types. Edit before saving.</span>
           </div>
           <div className="flex gap-3 items-start">
             <input
@@ -515,25 +515,25 @@ const WritingTestForm = ({ onSubmit, isLoading }) => {
               value={aiTheme}
               onChange={(e) => setAiTheme(e.target.value)}
               placeholder="Optional theme, e.g. technology and daily life (leave blank for varied topics)"
-              className="flex-1 border border-white/[.16] rounded-md shadow-sm p-2 text-sm"
+              className="flex-1 bg-ftm-night border-2 border-ftm-line2 focus:border-ftm-ink px-3 py-2 font-inter text-[14px] text-ftm-ink transition-colors"
             />
             <button
               type="button"
               onClick={generateWithAI}
               disabled={aiBusy}
-              className={`px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-ftm-red hover:bg-[#C51F35] whitespace-nowrap ${
+              className={`px-5 py-2.5 font-inter font-bold text-[14px] text-white bg-ftm-crimson hover:bg-ftm-crimsondeep transition-colors whitespace-nowrap ${
                 aiBusy ? 'opacity-50 cursor-not-allowed' : ''
               }`}
             >
               {aiBusy ? 'Generating…' : 'Generate prompts'}
             </button>
           </div>
-          {aiError && <p className="text-sm text-ftm-red">{aiError}</p>}
+          {aiError && <p className="text-sm text-ftm-ochre">{aiError}</p>}
         </div>
 
         {/* Writing prompts — the shared editor (edit-test uses the same one,
             so create and edit can no longer drift apart) */}
-        <div className="bg-ftm-card shadow rounded-lg p-6">
+        <div className="border-t-2 border-ftm-line2 pt-6">
           <WritingTestEditor content={prompts} onChange={setPrompts} />
         </div>
   
@@ -542,7 +542,7 @@ const WritingTestForm = ({ onSubmit, isLoading }) => {
           <button
             type="submit"
             disabled={isLoading}
-            className={`px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-ftm-red hover:bg-[#C51F35] ${
+            className={`px-5 py-2.5 font-inter font-bold text-[14px] text-white bg-ftm-crimson hover:bg-ftm-crimsondeep transition-colors ${
               isLoading ? 'opacity-50 cursor-not-allowed' : ''
             }`}
           >
@@ -588,9 +588,9 @@ export default function CreateTest() {
   // Initial step is test type selection
   if (!testType) {
     return (
-      <div className="min-h-screen bg-ftm-night py-12 px-4 sm:px-6 lg:px-8">
+      <div className="min-h-screen bg-ftm-night">
         <div className="max-w-3xl mx-auto">
-          <div className="bg-ftm-card shadow rounded-lg p-6">
+          <div className="border-t-2 border-ftm-line2 pt-6">
             <h2 className="text-2xl font-bold mb-6">Create New Test</h2>
             <p className="text-ftm-mut mb-6">Select the type of test you want to create:</p>
             
@@ -599,7 +599,7 @@ export default function CreateTest() {
                 <button
                   key={type}
                   onClick={() => setTestType(type.toLowerCase())}
-                  className="flex flex-col items-center justify-center p-6 border-2 border-white/[.16] rounded-lg hover:border-ftm-red hover:bg-ftm-slate/[.12] transition-colors"
+                  className="flex flex-col items-center justify-center p-6 border-2 border-ftm-line2 rounded hover:border-ftm-crimson hover:bg-ftm-up transition-colors"
                 >
                   <span className="text-xl font-medium text-ftm-ink">{type}</span>
                   <span className="mt-2 text-sm text-ftm-mut">
@@ -617,15 +617,15 @@ export default function CreateTest() {
   }
 
   return (
-    <div className="min-h-screen bg-ftm-night py-12 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-ftm-night">
       <div className="max-w-3xl mx-auto">
         {error && (
-          <div className="mb-4 bg-ftm-red/10 border border-ftm-red/30 text-ftm-red rounded-md p-4">
+          <div className="mb-6 border-l-[6px] border-ftm-crimson bg-ftm-card px-5 py-4 font-inter text-[14px] text-ftm-ink">
             {error}
           </div>
         )}
 
-        <div className="bg-ftm-card shadow rounded-lg p-6">
+        <div className="border-t-2 border-ftm-line2 pt-6">
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-2xl font-bold">Create {testType.charAt(0).toUpperCase() + testType.slice(1)} Test</h2>
             <button

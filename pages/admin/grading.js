@@ -107,7 +107,7 @@ export default function Grading() {
 
         if (httpStatus === 429) {
           const wait = payload.retryAfter || delay * 2;
-          addLog({ kind: 'warn', text: `Rate limited — waiting ${wait}s` });
+          addLog({ kind: 'warn', text: `Rate limited. Waiting ${wait}s` });
           await sleep(wait * 1000);
           retriedAfterRateLimit = true;
           continue; // same row again
@@ -134,7 +134,7 @@ export default function Grading() {
         } else if (payload.graded) {
           addLog({
             kind: 'ok',
-            text: `${payload.graded.student_id} — ${payload.graded.score}/50 (${payload.graded.wordCount} words)`,
+            text: `${payload.graded.student_id}  ${payload.graded.score}/50 (${payload.graded.wordCount} words)`,
           });
         }
 
@@ -167,116 +167,164 @@ export default function Grading() {
 
   return (
     <AdminShell>
-      <div className="max-w-4xl mx-auto">
-        <div className="mb-6">
-          <h1 className="font-grotesk text-xl text-ftm-ink">AI grading</h1>
-          <p className="font-inter text-[13px] text-ftm-mut mt-1">
-            Marks writing submissions out of 50 against the CEFR criteria, one at a time.
+      <div className="max-w-[880px]">
+        <div className="mb-8">
+          <h1 className="font-grotesk font-bold text-[26px] text-ftm-ink">Marking</h1>
+          <p className="font-inter text-[14px] text-ftm-mut mt-1 max-w-measure">
+            Marks writing submissions out of 50 against the CEFR criteria, one at a time. Every mark
+            is provisional until a person checks it.
           </p>
         </div>
 
         {error && (
-          <div className="mb-4 px-3 py-2 rounded border border-ftm-red/40 bg-ftm-red/[.08] font-inter text-[13px] text-ftm-red">
-            {error}
+          <div role="alert" className="border-l-[6px] border-ftm-crimson bg-ftm-card px-5 py-4 mb-6">
+            <h2 className="font-grotesk font-bold text-[15px] text-ftm-ochre mb-1">There is a problem</h2>
+            <p className="font-inter text-[14px] text-ftm-ink">{error}</p>
           </div>
         )}
 
         {status && !status.apiKeyConfigured && (
-          <div className="mb-4 px-3 py-2 rounded border border-ftm-amber/40 bg-ftm-amber/[.08] font-inter text-[13px] text-ftm-amber">
-            CEREBRAS_API is not set on this deployment. Add it in the Vercel project settings and redeploy.
+          <div className="border-l-[6px] border-ftm-ochre bg-ftm-card px-5 py-4 mb-6">
+            <h2 className="font-grotesk font-bold text-[15px] text-ftm-ochre mb-1">Marking is switched off</h2>
+            <p className="font-inter text-[14px] leading-relaxed text-ftm-ink">
+              CEREBRAS_API is not set on this deployment. Add it in the Vercel project settings, then
+              redeploy. Env vars are captured when a deployment is created, so adding one does not
+              reach the deployment that is already live.
+            </p>
           </div>
         )}
 
         {loading ? (
-          <p className="font-inter text-[13px] text-ftm-dim">Loading…</p>
+          <div aria-busy="true">
+            <div className="ftm-skeleton h-8 w-24 mb-3" />
+            <div className="ftm-skeleton h-3 w-64 mb-8" />
+            <div className="ftm-skeleton h-11 w-56" />
+          </div>
         ) : (
           <>
-            <div className="p-4 rounded-lg bg-ftm-bar border border-white/[.08] mb-5">
-              <div className="flex items-baseline gap-6 mb-3 flex-wrap">
-                <p className="font-grotesk text-2xl text-ftm-ink">{pending}</p>
-                <p className="font-inter text-[13px] text-ftm-mut">
-                  ungraded of {total} writing submissions
-                </p>
-                <p className="font-inter text-[12px] text-ftm-dim ml-auto">
-                  model: {status?.model}
-                </p>
+            <div className="border-t-2 border-ftm-line2 pt-5 mb-8">
+              <div className="flex flex-wrap gap-y-4 mb-6">
+                <div className="pr-10">
+                  <div className={`font-grotesk font-bold text-[34px] tabular-nums leading-none ${pending ? 'text-ftm-ochre' : 'text-ftm-green'}`}>
+                    {pending}
+                  </div>
+                  <div className="font-inter text-[11px] tracking-[.1em] uppercase text-ftm-dim mt-1.5">Unmarked</div>
+                </div>
+                <div className="pr-10">
+                  <div className="font-grotesk font-bold text-[34px] text-ftm-ink tabular-nums leading-none">{graded}</div>
+                  <div className="font-inter text-[11px] tracking-[.1em] uppercase text-ftm-dim mt-1.5">Marked</div>
+                </div>
+                <div className="pr-10">
+                  <div className="font-grotesk font-bold text-[34px] text-ftm-ink tabular-nums leading-none">{total}</div>
+                  <div className="font-inter text-[11px] tracking-[.1em] uppercase text-ftm-dim mt-1.5">Submissions</div>
+                </div>
+                <div className="pr-10">
+                  <div className="font-grotesk font-bold text-[34px] text-ftm-ink tabular-nums leading-none">{pct}%</div>
+                  <div className="font-inter text-[11px] tracking-[.1em] uppercase text-ftm-dim mt-1.5">Complete</div>
+                </div>
               </div>
 
-              <div className="h-1.5 rounded-full bg-white/[.08] overflow-hidden mb-4">
-                <div className="h-full bg-ftm-green transition-all" style={{ width: `${pct}%` }} />
+              <div
+                role="progressbar"
+                aria-valuenow={pct}
+                aria-valuemin={0}
+                aria-valuemax={100}
+                aria-label="Marking progress"
+                className="h-1.5 bg-ftm-up overflow-hidden mb-6"
+              >
+                <div className="h-full bg-ftm-green transition-all duration-300" style={{ width: `${pct}%` }} />
               </div>
 
-              <div className="flex items-center gap-3 flex-wrap">
+              <div className="flex items-center gap-6 flex-wrap">
                 {running ? (
                   <button
                     onClick={stop}
-                    className="px-3.5 py-1.5 rounded border border-white/[.15] text-ftm-ink font-inter font-medium text-[13px]"
+                    className="border border-ftm-line2 text-ftm-ink hover:bg-ftm-up font-inter font-bold text-[14px] px-5 py-2.5 transition-colors"
                   >
-                    Stop
+                    Stop the run
                   </button>
                 ) : (
                   <button
                     onClick={start}
                     disabled={pending === 0 || !status?.apiKeyConfigured}
-                    className="px-3.5 py-1.5 rounded bg-ftm-red text-white font-inter font-medium text-[13px] disabled:opacity-40"
+                    className="bg-ftm-crimson hover:bg-ftm-crimsondeep text-white font-inter font-bold text-[14px] px-5 py-2.5 disabled:opacity-40 disabled:hover:bg-ftm-crimson transition-colors"
                   >
-                    {pending === 0 ? 'Nothing to grade' : `Grade ${pending} submission${pending === 1 ? '' : 's'}`}
+                    {pending === 0 ? 'Nothing to mark' : `Mark ${pending} submission${pending === 1 ? '' : 's'}`}
                   </button>
                 )}
 
-                <label className="font-inter text-[12px] text-ftm-dim flex items-center gap-2">
-                  Delay between calls
+                <label htmlFor="delay" className="font-inter text-[13px] text-ftm-mut flex items-center gap-2">
+                  Wait
                   <input
+                    id="delay"
                     type="number"
                     min="1"
                     max="120"
                     value={delay}
                     disabled={running}
                     onChange={(e) => setDelay(Math.max(1, Number(e.target.value) || 1))}
-                    className="w-16 bg-ftm-night border border-white/[.12] rounded px-2 py-1 text-ftm-ink disabled:opacity-50"
+                    className="w-16 bg-ftm-night border-2 border-ftm-line2 focus:border-ftm-ink px-2 py-1.5 text-ftm-ink tabular-nums disabled:opacity-50 transition-colors"
                   />
-                  s
+                  seconds between calls
                 </label>
 
-                {!running && (
-                  <button onClick={refresh} className="font-inter text-[12px] text-ftm-dim hover:text-ftm-slate ml-auto">
+                {running ? (
+                  <span className="ftm-status font-semibold text-ftm-ochre ml-auto">
+                    Running. Keep this tab open.
+                  </span>
+                ) : (
+                  <button
+                    onClick={refresh}
+                    className="font-inter font-semibold text-[13px] text-ftm-link hover:text-ftm-ink underline underline-offset-4 ml-auto transition-colors"
+                  >
                     Refresh
                   </button>
                 )}
-                {running && (
-                  <span className="font-inter text-[12px] text-ftm-amber ml-auto">
-                    Running — keep this tab open
-                  </span>
-                )}
               </div>
 
-              <p className="font-inter text-[11px] text-ftm-dim mt-3">
-                The free Cerebras tier allows about 5 requests a minute. {delay}s between calls keeps
-                the run inside that. Grading {pending} will take roughly {Math.ceil((pending * delay) / 60)} min.
+              <p className="font-inter text-[13px] leading-relaxed text-ftm-mut mt-5 max-w-measure">
+                The free Cerebras tier allows about five requests a minute, so{' '}
+                <span className="tabular-nums font-semibold text-ftm-ink">{delay}</span>s between calls keeps
+                the run inside it. Marking{' '}
+                <span className="tabular-nums font-semibold text-ftm-ink">{pending}</span> will take roughly{' '}
+                <span className="tabular-nums font-semibold text-ftm-ink">{Math.ceil((pending * delay) / 60)}</span> minutes.
+                The run is resumable, so stopping loses nothing.
               </p>
+
+              {status?.model && (
+                <p className="font-inter text-[12px] text-ftm-dim mt-2">Model: {status.model}</p>
+              )}
             </div>
 
             {log.length > 0 && (
-              <div className="rounded-lg bg-ftm-bar border border-white/[.08] overflow-hidden">
-                {log.map((entry, index) => (
-                  <div
-                    key={index}
-                    className="px-4 py-2 border-b border-white/[.06] last:border-b-0 flex items-center gap-3"
-                  >
-                    <span className="font-inter text-[11px] text-ftm-dim w-16 shrink-0">{entry.at}</span>
-                    <span
-                      className={`font-inter text-[12px] ${
-                        entry.kind === 'ok' ? 'text-ftm-ink'
-                          : entry.kind === 'warn' ? 'text-ftm-amber'
-                          : entry.kind === 'error' ? 'text-ftm-red'
-                          : 'text-ftm-green'
-                      }`}
-                    >
-                      {entry.text}
-                    </span>
-                  </div>
-                ))}
-              </div>
+              <>
+                <h2 className="font-grotesk font-bold text-[17px] text-ftm-ink mb-3">Run log</h2>
+                <table className="ftm-table">
+                  <caption className="sr-only">Marking run log, newest last</caption>
+                  <thead>
+                    <tr>
+                      <th scope="col" className="w-20">Time</th>
+                      <th scope="col">Event</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {log.map((entry, index) => (
+                      <tr key={index}>
+                        <td className="text-ftm-dim tabular-nums align-top">{entry.at}</td>
+                        <td
+                          className={
+                            entry.kind === 'warn' || entry.kind === 'error' ? 'text-ftm-ochre'
+                              : entry.kind === 'done' ? 'text-ftm-green'
+                              : 'text-ftm-ink'
+                          }
+                        >
+                          {entry.text}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </>
             )}
           </>
         )}

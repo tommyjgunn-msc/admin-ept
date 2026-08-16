@@ -14,10 +14,10 @@
             </span>
           </div>
         </div>
-        <div className="overflow-hidden h-2 mt-1 text-xs flex rounded bg-white/10">
+        <div className="overflow-hidden h-2 mt-1 text-xs flex rounded bg-ftm-up">
           <div
             style={{ width: `${percentage}%` }}
-            className="shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center bg-ftm-red"
+            className="shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center bg-ftm-crimson"
           ></div>
         </div>
       </div>

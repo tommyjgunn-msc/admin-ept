@@ -21,9 +21,9 @@ function sectionText(entry) {
 
 function sectionTone(entry) {
   if (!entry) return 'text-ftm-dim';
-  if (entry.state === 'review') return 'text-ftm-amber';
+  if (entry.state === 'review') return 'text-ftm-ochre';
   if (entry.state === 'ungraded') return 'text-ftm-dim';
-  if (entry.noResponse) return 'text-ftm-amber';
+  if (entry.noResponse) return 'text-ftm-ochre';
   return 'text-ftm-ink';
 }
 
@@ -115,137 +115,171 @@ export default function Results() {
     }
   };
 
-  const chip = (tone) =>
-    `font-inter text-[11px] px-2 py-0.5 rounded ${
-      tone === 'red' ? 'text-ftm-red bg-ftm-red/[.10]'
-      : tone === 'amber' ? 'text-ftm-amber bg-ftm-amber/[.10]'
-      : tone === 'green' ? 'text-ftm-green bg-ftm-green/[.10]'
-      : 'text-ftm-dim bg-white/[.06]'
-    }`;
+  // Sitting summary. Was a row of tinted rounded chips in four colours; a
+  // person scanning it had to decode a palette before reading a number. It is
+  // now a ruled strip of figure-over-label pairs, which is the one arrangement
+  // that lets you compare two sittings by eye.
+  const Figure = ({ label, value, tone = 'text-ftm-ink' }) => (
+    <div className="pr-8">
+      <div className={`font-grotesk font-bold text-[21px] tabular-nums leading-none ${tone}`}>{value}</div>
+      <div className="font-inter text-[11px] tracking-[.1em] uppercase text-ftm-dim mt-1.5">{label}</div>
+    </div>
+  );
 
   return (
     <AdminShell>
-      <div className="max-w-6xl mx-auto">
-        <div className="mb-5 flex items-start justify-between gap-4 flex-wrap">
-          <h1 className="font-grotesk text-xl text-ftm-ink">Results</h1>
-          <input
-            type="search"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search name or EPT ID"
-            className="w-full sm:w-72 border border-white/[.12] rounded px-3 py-2 font-inter text-[13px]"
-          />
+      <div className="max-w-shell">
+        <div className="mb-8 flex items-end justify-between gap-6 flex-wrap">
+          <div>
+            <h1 className="font-grotesk font-bold text-[26px] text-ftm-ink">Results</h1>
+            <p className="font-inter text-[14px] text-ftm-mut mt-1">Newest sitting first.</p>
+          </div>
+          <div>
+            <label htmlFor="q" className="block font-inter font-semibold text-[12px] text-ftm-mut mb-1.5">
+              Find a candidate
+            </label>
+            <input
+              id="q"
+              type="search"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Name or EPT ID"
+              className="w-full sm:w-72 bg-ftm-night border-2 border-ftm-line2 focus:border-ftm-ink px-3.5 py-2.5 font-inter text-[14px] transition-colors"
+            />
+          </div>
         </div>
 
         {error && (
-          <div className="mb-4 px-3 py-2 rounded border border-ftm-red/40 bg-ftm-red/[.08] font-inter text-[13px] text-ftm-red whitespace-pre-line">
-            {error}
+          <div role="alert" className="border-l-[6px] border-ftm-crimson bg-ftm-card px-5 py-4 mb-6 whitespace-pre-line">
+            <h2 className="font-grotesk font-bold text-[15px] text-ftm-ochre mb-1">There is a problem</h2>
+            <p className="font-inter text-[14px] text-ftm-ink">{error}</p>
           </div>
         )}
         {notice && (
-          <div className="mb-4 px-3 py-2 rounded border border-ftm-green/40 bg-ftm-green/[.08] font-inter text-[13px] text-ftm-green">
-            {notice}
+          <div role="status" className="border-l-[6px] border-ftm-green bg-ftm-card px-5 py-4 mb-6">
+            <p className="font-inter text-[14px] text-ftm-ink">{notice}</p>
           </div>
         )}
 
         {loading ? (
-          <p className="font-inter text-[13px] text-ftm-dim">Loading…</p>
+          <div aria-busy="true">
+            <div className="ftm-skeleton h-6 w-56 mb-6" />
+            {[0, 1, 2, 3, 4].map((i) => (
+              <div key={i} className="flex gap-6 py-3 border-b border-ftm-line">
+                <div className="ftm-skeleton h-4 flex-[2]" />
+                <div className="ftm-skeleton h-4 flex-1" />
+                <div className="ftm-skeleton h-4 flex-1" />
+                <div className="ftm-skeleton h-4 flex-1" />
+              </div>
+            ))}
+          </div>
         ) : visible.length === 0 ? (
-          <div className="p-6 rounded-lg bg-ftm-bar border border-white/[.08] text-center">
-            <p className="font-inter text-[13px] text-ftm-mut">
-              {query ? `Nothing matches “${query}”.` : 'No submissions recorded yet.'}
+          <div className="border-t border-ftm-line2 pt-6 max-w-measure">
+            <h2 className="font-grotesk font-bold text-[19px] text-ftm-ink mb-2">
+              {query ? 'No candidate matches that' : 'No submissions yet'}
+            </h2>
+            <p className="font-inter text-[15px] leading-relaxed text-ftm-mut">
+              {query
+                ? <>Nothing matches &ldquo;{query}&rdquo;. Try part of a surname, or an EPT ID like EPT-2026-04471.</>
+                : 'Results appear here once candidates start submitting sections.'}
             </p>
           </div>
         ) : (
-          <div className="space-y-3">
+          <div className="space-y-14">
             {visible.map((sitting) => {
               const isOpen = openDate === sitting.date_iso || Boolean(query);
               const s = sitting.summary;
               return (
-                <div key={sitting.date_iso} className="rounded-lg bg-ftm-bar border border-white/[.08] overflow-hidden">
-                  <div className="px-4 py-3 flex items-center gap-3 flex-wrap border-b border-white/[.06]">
-                    <button
-                      onClick={() => setOpenDate(isOpen && !query ? null : sitting.date_iso)}
-                      className="font-inter text-[14px] text-ftm-ink hover:text-white text-left"
-                    >
-                      {sitting.date_label}
-                    </button>
-                    <span className={chip()}>
-                      {sitting.students.length} student{sitting.students.length === 1 ? '' : 's'}
-                    </span>
-                    {s.averagePercentage !== null && (
-                      <span className={chip('green')}>avg {s.averagePercentage}%</span>
-                    )}
-                    {s.needsReview > 0 && <span className={chip('amber')}>{s.needsReview} to review</span>}
-                    {s.noResponse > 0 && (
-                      <span className={chip('amber')}>{s.noResponse} no response</span>
-                    )}
-                    {s.flagged > 0 && <span className={chip('red')}>{s.flagged} flagged</span>}
+                <section key={sitting.date_iso}>
+                  <div className="border-t-2 border-ftm-line2 pt-5 mb-5">
+                    <div className="flex items-start justify-between gap-6 flex-wrap mb-5">
+                      <button
+                        onClick={() => setOpenDate(isOpen && !query ? null : sitting.date_iso)}
+                        aria-expanded={isOpen}
+                        className="font-grotesk font-bold text-[19px] text-ftm-ink hover:text-white text-left transition-colors"
+                      >
+                        {sitting.date_label}
+                      </button>
 
-                    <div className="ml-auto flex items-center gap-3">
-                      <button
-                        onClick={() => buildPdf(sitting.date_iso, { download: false })}
-                        disabled={busyDate === sitting.date_iso}
-                        className="font-inter text-[12px] text-ftm-slate hover:text-ftm-ink disabled:opacity-50"
-                      >
-                        Preview
-                      </button>
-                      <button
-                        onClick={() => buildPdf(sitting.date_iso, { download: true })}
-                        disabled={busyDate === sitting.date_iso}
-                        className="px-3 py-1.5 rounded bg-ftm-red text-white font-inter font-medium text-[12px] disabled:opacity-50"
-                      >
-                        {busyDate === sitting.date_iso ? 'Working…' : 'Download PDF'}
-                      </button>
+                      <div className="flex items-center gap-6">
+                        <button
+                          onClick={() => buildPdf(sitting.date_iso, { download: false })}
+                          disabled={busyDate === sitting.date_iso}
+                          className="font-inter font-semibold text-[13px] text-ftm-link hover:text-ftm-ink underline underline-offset-4 disabled:opacity-50 transition-colors"
+                        >
+                          Preview the report
+                        </button>
+                        <button
+                          onClick={() => buildPdf(sitting.date_iso, { download: true })}
+                          disabled={busyDate === sitting.date_iso}
+                          className="bg-ftm-crimson hover:bg-ftm-crimsondeep text-white font-inter font-bold text-[13px] px-4 py-2.5 disabled:opacity-50 transition-colors"
+                        >
+                          {busyDate === sitting.date_iso ? 'Building' : 'Download PDF'}
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-wrap gap-y-4 border-b border-ftm-line pb-5">
+                      <Figure label="Candidates" value={sitting.students.length} />
+                      {s.averagePercentage !== null && (
+                        <Figure label="Average" value={`${s.averagePercentage}%`} />
+                      )}
+                      {s.needsReview > 0 && (
+                        <Figure label="To review" value={s.needsReview} tone="text-ftm-ochre" />
+                      )}
+                      {s.noResponse > 0 && (
+                        <Figure label="No response" value={s.noResponse} tone="text-ftm-ochre" />
+                      )}
+                      {s.flagged > 0 && (
+                        <Figure label="Flagged" value={s.flagged} tone="text-ftm-ochre" />
+                      )}
                     </div>
                   </div>
 
                   {isOpen && (
                     <div className="overflow-x-auto">
-                      <table className="w-full min-w-[720px]">
+                      <table className="ftm-table ftm-table-sticky min-w-[760px]">
+                        <caption className="sr-only">Candidate marks for {sitting.date_label}</caption>
                         <thead>
-                          <tr className="font-inter text-[11px] uppercase tracking-wide text-ftm-dim">
-                            <th className="text-left font-medium px-4 py-2">Student</th>
-                            <th className="text-left font-medium px-3 py-2">EPT ID</th>
+                          <tr>
+                            <th scope="col">Candidate</th>
+                            <th scope="col">EPT ID</th>
                             {SECTIONS.map(sec => (
-                              <th key={sec.key} className="text-right font-medium px-3 py-2">{sec.label}</th>
+                              <th key={sec.key} scope="col" className="num">{sec.label}</th>
                             ))}
-                            <th className="text-right font-medium px-3 py-2">Total</th>
-                            <th className="text-right font-medium px-4 py-2">%</th>
+                            <th scope="col" className="num">Total</th>
+                            <th scope="col" className="num">%</th>
                           </tr>
                         </thead>
                         <tbody>
                           {sitting.students.map((student) => (
-                            <tr key={student.student_id} className="border-t border-white/[.05]">
-                              <td className="px-4 py-2">
+                            <tr key={student.student_id}>
+                              <th scope="row" className="text-left align-top font-normal">
                                 <span className="font-inter text-[13px] text-ftm-ink">
                                   {student.name || <span className="text-ftm-dim italic">no Auth record</span>}
                                 </span>
                                 {student.anyFlagged && (
-                                  <span className={`${chip('red')} ml-2`}>flagged</span>
+                                  <span className="ftm-status font-semibold text-ftm-ochre ml-3">flagged</span>
                                 )}
                                 {student.hasNoResponse && (
                                   <span
-                                    className={`${chip('amber')} ml-2`}
-                                    title="Nothing came through for this section. Either the student submitted nothing, or they were moved to another machine to finish — worth checking before the mark stands."
+                                    className="block font-inter text-[11px] text-ftm-ochre mt-1"
+                                    title="Nothing came through for this section. Either the candidate submitted nothing, or they were moved to another machine to finish. Worth checking before the mark stands."
                                   >
                                     no response: {student.noResponseSections.join(', ')}
                                   </span>
                                 )}
-                              </td>
-                              <td className="px-3 py-2 font-inter text-[12px] text-ftm-mut">{student.student_id}</td>
+                              </th>
+                              <td className="font-inter text-[12px] text-ftm-mut tabular-nums">{student.student_id}</td>
                               {SECTIONS.map(sec => (
-                                <td
-                                  key={sec.key}
-                                  className={`px-3 py-2 text-right font-inter text-[13px] ${sectionTone(student.sections[sec.key])}`}
-                                >
+                                <td key={sec.key} className={`num ${sectionTone(student.sections[sec.key])}`}>
                                   {sectionText(student.sections[sec.key])}
                                 </td>
                               ))}
-                              <td className="px-3 py-2 text-right font-inter text-[13px] text-ftm-slate">
+                              <td className="num text-ftm-mut">
                                 {student.complete ? `${student.totalScore}/${student.totalPossible}` : '—'}
                               </td>
-                              <td className="px-4 py-2 text-right font-inter text-[13px] font-medium text-ftm-ink">
+                              <td className="num font-semibold">
                                 {student.complete && student.overallPercentage !== null
                                   ? `${student.overallPercentage}%` : '—'}
                               </td>
@@ -255,21 +289,45 @@ export default function Results() {
                       </table>
                     </div>
                   )}
-                </div>
+                </section>
               );
             })}
           </div>
         )}
 
         {!loading && visible.length > 0 && (
-          <p className="font-inter text-[11px] text-ftm-dim mt-4">
-            A score marked <span className="text-ftm-amber">*</span> is a zero from an empty
-            submission — nothing came through for that section. That can mean the student
-            submitted nothing, or that they were moved to another machine to finish and this row
-            is the leftover, so it is worth checking before the mark stands.
-            “review” means the writing mark could not be read automatically; “ungraded” means the
-            script has not been marked yet. Totals appear only once all three sections carry a mark.
-          </p>
+          <div className="border-t border-ftm-line mt-12 pt-5 max-w-measure">
+            <h2 className="font-inter font-bold text-[11px] tracking-[.14em] uppercase text-ftm-dim mb-3">
+              Reading this table
+            </h2>
+            <dl className="ftm-facts">
+              <div>
+                <dt className="k"><span className="text-ftm-ochre font-semibold">*</span> after a score</dt>
+                <dd className="v text-left max-w-[440px] font-normal text-ftm-mut">
+                  A zero from an empty submission. The candidate may have written nothing, or been
+                  moved to another machine to finish, leaving this row behind. Check before the mark stands.
+                </dd>
+              </div>
+              <div>
+                <dt className="k">review</dt>
+                <dd className="v text-left max-w-[440px] font-normal text-ftm-mut">
+                  The writing mark could not be read automatically.
+                </dd>
+              </div>
+              <div>
+                <dt className="k">ungraded</dt>
+                <dd className="v text-left max-w-[440px] font-normal text-ftm-mut">
+                  The script has not been marked yet.
+                </dd>
+              </div>
+              <div>
+                <dt className="k">Blank total</dt>
+                <dd className="v text-left max-w-[440px] font-normal text-ftm-mut">
+                  Totals appear only once all three sections carry a mark.
+                </dd>
+              </div>
+            </dl>
+          </div>
         )}
       </div>
     </AdminShell>
