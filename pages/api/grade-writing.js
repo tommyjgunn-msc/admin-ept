@@ -1,11 +1,11 @@
 // pages/api/grade-writing.js — AI grading for writing submissions.
 //
 // Replaces the Apps Script grader that ran on the spreadsheet with a
-// hardcoded OpenRouter key. The Cerebras key lives in CEREBRAS_API here and
+// hardcoded OpenRouter key. The inference key lives in LLM_API_KEY here and
 // is never exposed to the browser.
 //
-// Deliberately grades ONE submission per request. The Cerebras free tier is
-// about 5 requests/minute and serverless functions time out in seconds, so a
+// Deliberately grades ONE submission per request. Free inference tiers run to
+// roughly 5 requests/minute and serverless functions time out in seconds, so a
 // server-side "grade everything" loop could not finish. The admin page paces
 // the calls instead, which also makes the run resumable and interruptible.
 import {
@@ -50,7 +50,7 @@ async function handler(req, res) {
   if (!hasApiKey()) {
     return res.status(503).json({
       error: 'missing_api_key',
-      message: 'CEREBRAS_API is not set on this deployment.',
+      message: 'LLM_API_KEY is not set on this deployment.',
     });
   }
 

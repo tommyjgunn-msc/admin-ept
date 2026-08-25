@@ -15,7 +15,7 @@ async function handler(req, res) {
   if (!hasApiKey()) {
     return res.status(503).json({
       error: 'missing_api_key',
-      message: 'CEREBRAS_API is not set on this deployment.',
+      message: 'LLM_API_KEY is not set on this deployment.',
     });
   }
 
@@ -35,6 +35,12 @@ async function handler(req, res) {
     }
     if (error.code === 'network_error') {
       return res.status(504).json({ error: 'network_error', message: error.message });
+    }
+    // Billing and other upstream refusals. Without this branch they fall to
+    // withAdminAuth, which hides the message behind a generic 500 in
+    // production -- exactly the case where the admin needs to read it.
+    if (error.code === 'payment_required' || error.code === 'api_error') {
+      return res.status(502).json({ error: error.code, message: error.message });
     }
     throw error; // withAdminAuth turns anything else into a clean 500
   }

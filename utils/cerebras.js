@@ -1,20 +1,53 @@
-// utils/cerebras.js — Cerebras inference client for writing-test grading and
-// writing-prompt generation.
+// utils/cerebras.js — OpenAI-compatible inference client for writing-test
+// grading and writing-prompt generation. Provider-agnostic despite the
+// filename; it started on Cerebras and now runs wherever LLM_BASE_URL points.
 //
 // Replaces the Apps Script grader that lived on the sheet and called
-// OpenRouter with a hardcoded key. The key now lives in the CEREBRAS_API
+// OpenRouter with a hardcoded key. The key now lives in the LLM_API_KEY
 // environment variable and never touches the spreadsheet.
 //
-// Cerebras exposes an OpenAI-compatible chat completions endpoint.
+// Cerebras exposes an OpenAI-compatible chat completions endpoint -- and so do
+// Groq, OpenRouter, Together, and Gemini's compatibility layer. The base URL
+// lives in an env var so moving provider is a Vercel setting rather than a
+// commit. When Cerebras retired its free tier on 2026-08-17, this one hardcoded
+// line is what turned their pricing decision into our outage.
+//
+//   Groq:      LLM_BASE_URL=https://api.groq.com/openai/v1
+//              LLM_MODEL=openai/gpt-oss-120b
+//   Cerebras:  LLM_BASE_URL=https://api.cerebras.ai/v1   (the default)
+//
+// Whatever the provider, the model must still phrase its mark as "n/50" or
+// "n out of 50" or extractScore() below will not find it.
+const DEFAULT_BASE_URL = 'https://api.cerebras.ai/v1';
 
-const API_URL = 'https://api.cerebras.ai/v1/chat/completions';
+function getBaseUrl() {
+  const base = process.env.LLM_BASE_URL || DEFAULT_BASE_URL;
+  return base.trim().replace(/\/+$/, '');
+}
 
-// Cerebras serves gpt-oss-120b (production), gemma-4-31b (preview) and
-// zai-glm-4.7 (preview) on this account. Default to the production model:
-// zai-glm-4.7 is flagged for deprecation on 2026-08-17, which is inside the
-// window this grader is meant to run in, and a preview model can change under
-// us mid-marking-season.
-// Override with CEREBRAS_MODEL to try another without touching this file.
+function getApiUrl() {
+  return `${getBaseUrl()}/chat/completions`;
+}
+
+// Names the host in error messages, so a rejection says which provider did the
+// rejecting. Sending a Groq key to Cerebras returns a 401 that reads exactly
+// like a bad key, and the message never used to say where it came from.
+function providerName() {
+  try {
+    return new URL(getBaseUrl()).hostname.replace(/^api\./, '');
+  } catch {
+    return 'inference API';
+  }
+}
+
+// gpt-oss-120b is the model extractScore() below was tuned against: it phrases
+// its verdict as "n/50" or "n out of 50", which the regex depends on. Groq
+// serves the same weights as openai/gpt-oss-120b. Prefer a production model
+// over a preview one -- a preview can be deprecated mid-marking-season, as
+// zai-glm-4.7 was on 2026-08-17.
+// Override with LLM_MODEL, but grade one real essay afterwards and confirm a
+// mark still comes back: a different family phrases things differently, and a
+// missed mark sends every submission to manual review.
 const DEFAULT_MODEL = 'gpt-oss-120b';
 
 // Free-tier context is modest; a 500-word essay is ~700 tokens, so this only
@@ -32,11 +65,19 @@ export const SYSTEM_PROMPT =
   'Provide a final grade out of 50';
 
 export function getModel() {
-  return process.env.CEREBRAS_MODEL || DEFAULT_MODEL;
+  return process.env.LLM_MODEL || DEFAULT_MODEL;
+}
+
+// The trim matters: a key pasted into a dashboard often arrives with a trailing
+// newline or wrapped in quotes, which makes a malformed Authorization header and
+// comes back as a 401 that is indistinguishable from a genuinely wrong key.
+export function getApiKey() {
+  const key = process.env.LLM_API_KEY || '';
+  return key.trim().replace(/^['"]|['"]$/g, '');
 }
 
 export function hasApiKey() {
-  return Boolean(process.env.CEREBRAS_API || process.env.CEREBRAS_API_KEY);
+  return Boolean(getApiKey());
 }
 
 /**
@@ -45,9 +86,9 @@ export function hasApiKey() {
  * Returns the assistant's text.
  */
 export async function chatCompletion(messages, { timeoutMs = 60000, temperature = 0.2 } = {}) {
-  const apiKey = process.env.CEREBRAS_API || process.env.CEREBRAS_API_KEY;
+  const apiKey = getApiKey();
   if (!apiKey) {
-    const error = new Error('CEREBRAS_API is not set');
+    const error = new Error('LLM_API_KEY is not set');
     error.code = 'missing_api_key';
     throw error;
   }
@@ -57,7 +98,7 @@ export async function chatCompletion(messages, { timeoutMs = 60000, temperature 
 
   let response;
   try {
-    response = await fetch(API_URL, {
+    response = await fetch(getApiUrl(), {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -72,7 +113,9 @@ export async function chatCompletion(messages, { timeoutMs = 60000, temperature 
     });
   } catch (err) {
     const error = new Error(
-      err.name === 'AbortError' ? 'Cerebras request timed out' : `Cerebras request failed: ${err.message}`
+      err.name === 'AbortError'
+        ? `${providerName()} request timed out`
+        : `${providerName()} request failed: ${err.message}`
     );
     error.code = 'network_error';
     throw error;
@@ -81,7 +124,7 @@ export async function chatCompletion(messages, { timeoutMs = 60000, temperature 
   }
 
   if (response.status === 429) {
-    const error = new Error('Cerebras rate limit reached. Slow down and retry.');
+    const error = new Error(`${providerName()} rate limit reached. Slow down and retry.`);
     error.code = 'rate_limited';
     error.retryAfter = Number(response.headers.get('retry-after')) || null;
     throw error;
@@ -89,16 +132,42 @@ export async function chatCompletion(messages, { timeoutMs = 60000, temperature 
 
   if (!response.ok) {
     const detail = await response.text().catch(() => '');
-    const error = new Error(`Cerebras returned ${response.status}`);
-    error.code = 'api_error';
+
+    // Cerebras answers failures with an OpenAI-shaped JSON body that says why.
+    // Carry that sentence into the message: it is the only thing that reaches
+    // the admin page, which shows error.message and nothing else. A bare
+    // "Cerebras returned 402" cost an afternoon of key-swapping when the key
+    // was never the problem (402 is billing; a bad key is a 401).
+    let reason = '';
+    try {
+      const body = JSON.parse(detail);
+      reason = body?.error?.message || body?.message || '';
+    } catch {
+      reason = detail.slice(0, 200).trim();
+    }
+
+    const error = new Error(
+      reason
+        ? `${providerName()} returned ${response.status}: ${reason}`
+        : `${providerName()} returned ${response.status}`
+    );
+    error.code = response.status === 402 ? 'payment_required' : 'api_error';
+    error.status = response.status;
     error.detail = detail.slice(0, 500);
+
+    // Also into the Vercel function log, so a failure is diagnosable after the
+    // fact without reproducing it in the UI.
+    console.error(
+      `${providerName()} ${response.status} for model ${getModel()}: ${detail.slice(0, 300)}`
+    );
+
     throw error;
   }
 
   const result = await response.json();
   const content = result?.choices?.[0]?.message?.content;
   if (!content) {
-    const error = new Error('Cerebras returned no content');
+    const error = new Error(`${providerName()} returned no content`);
     error.code = 'empty_response';
     throw error;
   }
@@ -107,7 +176,7 @@ export async function chatCompletion(messages, { timeoutMs = 60000, temperature 
 }
 
 /**
- * Send one submission to Cerebras for grading.
+ * Send one submission to the model for grading.
  * Returns the raw assistant text; score extraction is a separate concern.
  */
 export async function gradeSubmission(essay, { timeoutMs = 60000 } = {}) {
