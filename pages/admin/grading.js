@@ -1,13 +1,17 @@
 // pages/admin/grading.js — AI grading for writing submissions.
 //
-// The browser drives the run one submission at a time. The Cerebras free tier
-// allows roughly 5 requests a minute, so the delay between calls is the thing
-// keeping us inside the quota; it is adjustable here rather than hardcoded.
+// The browser drives the run one submission at a time. Free inference tiers cap
+// tokens per minute as tightly as requests, so the delay between calls is the
+// thing keeping us inside the quota; it is adjustable here rather than hardcoded.
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/router';
 import AdminShell from '../../components/AdminShell';
 
-const DEFAULT_DELAY_SECONDS = 13; // ~4.6 req/min, just under the 5/min free tier
+// ~4.6 req/min. Tokens, not requests, are the binding limit: Groq's free tier
+// allows 30 req/min but only 8k tokens/min, and one submission costs roughly
+// 1.3k tokens, so the real ceiling is about 6/min. 13s stays under both that
+// and the 5/min some other free tiers impose. Raise it at your own risk.
+const DEFAULT_DELAY_SECONDS = 13;
 
 export default function Grading() {
   const [status, setStatus] = useState(null);
@@ -187,7 +191,7 @@ export default function Grading() {
           <div className="border-l-[6px] border-ftm-ochre bg-ftm-card px-5 py-4 mb-6">
             <h2 className="font-grotesk font-bold text-[15px] text-ftm-ochre mb-1">Marking is switched off</h2>
             <p className="font-inter text-[14px] leading-relaxed text-ftm-ink">
-              CEREBRAS_API is not set on this deployment. Add it in the Vercel project settings, then
+              LLM_API_KEY is not set on this deployment. Add it in the Vercel project settings, then
               redeploy. Env vars are captured when a deployment is created, so adding one does not
               reach the deployment that is already live.
             </p>
@@ -283,7 +287,7 @@ export default function Grading() {
               </div>
 
               <p className="font-inter text-[13px] leading-relaxed text-ftm-mut mt-5 max-w-measure">
-                The free Cerebras tier allows about five requests a minute, so{' '}
+                Free inference tiers cap tokens per minute as well as requests, so{' '}
                 <span className="tabular-nums font-semibold text-ftm-ink">{delay}</span>s between calls keeps
                 the run inside it. Marking{' '}
                 <span className="tabular-nums font-semibold text-ftm-ink">{pending}</span> will take roughly{' '}
